@@ -2,21 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 function App() {
-  const GAME_STORAGE_KEY = 'bilbingo-game-state-v3'
-  const SETTINGS_STORAGE_KEY = 'bilbingo-last-settings-v1'
+  const GAME_STORAGE_KEY = 'bilbingo-game-state-v4'
+  const SETTINGS_STORAGE_KEY = 'bilbingo-last-settings-v2'
 
   const [screen, setScreen] = useState('start')
   const [showResumePrompt, setShowResumePrompt] = useState(false)
   const [savedGame, setSavedGame] = useState(null)
 
-  const [objectType, setObjectType] = useState('lastbilar')
+  const [objectType, setObjectType] = useState('bilar')
   const [customObject, setCustomObject] = useState('')
 
-  const [playMode, setPlayMode] = useState('distance') // distance | time
-  const [travelMode, setTravelMode] = useState('manual') // manual | gps
+  const [playMode, setPlayMode] = useState('time') // time | gps
 
   const [distanceMode, setDistanceMode] = useState('preset')
-  const [targetDistance, setTargetDistance] = useState(20)
+  const [targetDistance, setTargetDistance] = useState(5)
   const [customDistance, setCustomDistance] = useState('')
 
   const [timeMode, setTimeMode] = useState('preset')
@@ -67,7 +66,7 @@ function App() {
   const activeTargetSeconds = activeTargetMinutes * 60
 
   const progress = useMemo(() => {
-    if (playMode === 'distance') {
+    if (playMode === 'gps') {
       return activeTargetDistance > 0
         ? Math.min((distance / activeTargetDistance) * 100, 100)
         : 0
@@ -148,7 +147,6 @@ function App() {
       objectType,
       customObject,
       playMode,
-      travelMode,
       distanceMode,
       targetDistance,
       customDistance,
@@ -175,7 +173,6 @@ function App() {
       if (parsed.objectType) setObjectType(parsed.objectType)
       if (parsed.customObject !== undefined) setCustomObject(parsed.customObject)
       if (parsed.playMode) setPlayMode(parsed.playMode)
-      if (parsed.travelMode) setTravelMode(parsed.travelMode)
       if (parsed.distanceMode) setDistanceMode(parsed.distanceMode)
       if (parsed.targetDistance !== undefined) setTargetDistance(parsed.targetDistance)
       if (parsed.customDistance !== undefined) setCustomDistance(parsed.customDistance)
@@ -286,12 +283,11 @@ function App() {
     releaseWakeLock()
 
     setScreen('start')
-    setObjectType('lastbilar')
+    setObjectType('bilar')
     setCustomObject('')
-    setPlayMode('distance')
-    setTravelMode('manual')
+    setPlayMode('time')
     setDistanceMode('preset')
-    setTargetDistance(20)
+    setTargetDistance(5)
     setCustomDistance('')
     setTimeMode('preset')
     setTargetMinutes(3)
@@ -313,7 +309,6 @@ function App() {
     if (parsed.objectType) setObjectType(parsed.objectType)
     if (parsed.customObject !== undefined) setCustomObject(parsed.customObject)
     if (parsed.playMode) setPlayMode(parsed.playMode)
-    if (parsed.travelMode) setTravelMode(parsed.travelMode)
     if (parsed.distanceMode) setDistanceMode(parsed.distanceMode)
     if (parsed.targetDistance !== undefined) setTargetDistance(parsed.targetDistance)
     if (parsed.customDistance !== undefined) setCustomDistance(parsed.customDistance)
@@ -414,7 +409,7 @@ function App() {
       return
     }
 
-    if (playMode === 'distance' && activeTargetDistance <= 0) {
+    if (playMode === 'gps' && activeTargetDistance <= 0) {
       alert('Skriv ett giltigt avstånd större än 0 km.')
       return
     }
@@ -448,17 +443,6 @@ function App() {
     buzz(20)
   }
 
-  const handleDistanceClick = () => {
-    if (isPaused) return
-
-    const newDistance = distance + 1
-    setDistance(newDistance)
-
-    if (newDistance >= activeTargetDistance) {
-      finishGame()
-    }
-  }
-
   const togglePause = async () => {
     const nextPaused = !isPaused
     setIsPaused(nextPaused)
@@ -466,9 +450,6 @@ function App() {
     if (nextPaused) {
       stopTimer()
       stopGpsTracking()
-      setGpsStatus((prev) =>
-        playMode === 'distance' && travelMode === 'gps' ? `${prev} · pausad` : prev
-      )
       await releaseWakeLock()
     } else {
       await acquireWakeLock()
@@ -477,7 +458,7 @@ function App() {
         startCountdown()
       }
 
-      if (playMode === 'distance' && travelMode === 'gps') {
+      if (playMode === 'gps') {
         startGpsTracking()
       }
     }
@@ -538,7 +519,7 @@ function App() {
 
     acquireWakeLock()
 
-    if (playMode === 'distance' && travelMode === 'gps') {
+    if (playMode === 'gps') {
       startGpsTracking()
     }
 
@@ -550,7 +531,7 @@ function App() {
       stopTimer()
       stopGpsTracking()
     }
-  }, [screen, playMode, travelMode, isPaused])
+  }, [screen, playMode, isPaused])
 
   useEffect(() => {
     const handleVisibility = async () => {
@@ -572,7 +553,6 @@ function App() {
       objectType,
       customObject,
       playMode,
-      travelMode,
       distanceMode,
       targetDistance,
       customDistance,
@@ -594,7 +574,6 @@ function App() {
     objectType,
     customObject,
     playMode,
-    travelMode,
     distanceMode,
     targetDistance,
     customDistance,
@@ -670,10 +649,9 @@ function App() {
           <p className="subtitle">Gissa, räkna och vinn över familjen på bilresan!</p>
 
           <div className="hero-icons">
+            <span>🚗</span>
             <span>🚚</span>
-            <span>🚙</span>
             <span>🚌</span>
-            <span>🐄</span>
             <span>⭐</span>
           </div>
 
@@ -714,10 +692,10 @@ function App() {
           </div>
 
           <div className="section">
-            <label className="label">Välj objekt att räkna</label>
+            <label className="label">Vad ska ni räkna?</label>
             <select value={objectType} onChange={(e) => setObjectType(e.target.value)}>
-              <option value="lastbilar">Lastbilar</option>
               <option value="bilar">Bilar</option>
+              <option value="lastbilar">Lastbilar</option>
               <option value="röda bilar">Röda bilar</option>
               <option value="husbilar">Husbilar</option>
               <option value="skyltar">Skyltar</option>
@@ -735,15 +713,8 @@ function App() {
           </div>
 
           <div className="section">
-            <label className="label">Välj spelläge</label>
+            <label className="label">Hur vill ni spela?</label>
             <div className="distance-mode-row">
-              <button
-                type="button"
-                className={playMode === 'distance' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                onClick={() => setPlayMode('distance')}
-              >
-                Sträcka
-              </button>
               <button
                 type="button"
                 className={playMode === 'time' ? 'primary-button small-mode-button' : 'small-mode-button'}
@@ -751,75 +722,20 @@ function App() {
               >
                 Tid
               </button>
+              <button
+                type="button"
+                className={playMode === 'gps' ? 'primary-button small-mode-button' : 'small-mode-button'}
+                onClick={() => setPlayMode('gps')}
+              >
+                GPS
+              </button>
             </div>
           </div>
 
-          {playMode === 'distance' && (
-            <>
-              <div className="section">
-                <label className="label">Välj avstånd</label>
-                <div className="distance-mode-row">
-                  <button
-                    type="button"
-                    className={distanceMode === 'preset' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                    onClick={() => setDistanceMode('preset')}
-                  >
-                    Fasta val
-                  </button>
-                  <button
-                    type="button"
-                    className={distanceMode === 'custom' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                    onClick={() => setDistanceMode('custom')}
-                  >
-                    Eget avstånd
-                  </button>
-                </div>
-
-                {distanceMode === 'preset' ? (
-                  <select value={targetDistance} onChange={(e) => setTargetDistance(Number(e.target.value))}>
-                    <option value={1}>1 km</option>
-                    <option value={2}>2 km</option>
-                    <option value={5}>5 km</option>
-                    <option value={10}>10 km</option>
-                    <option value={20}>20 km</option>
-                  </select>
-                ) : (
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="Skriv eget avstånd i km"
-                    value={customDistance}
-                    onChange={(e) => setCustomDistance(e.target.value)}
-                  />
-                )}
-              </div>
-
-              <div className="section">
-                <label className="label">Välj km-läge</label>
-                <div className="distance-mode-row">
-                  <button
-                    type="button"
-                    className={travelMode === 'manual' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                    onClick={() => setTravelMode('manual')}
-                  >
-                    Manuellt
-                  </button>
-                  <button
-                    type="button"
-                    className={travelMode === 'gps' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                    onClick={() => setTravelMode('gps')}
-                  >
-                    GPS
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
           {playMode === 'time' && (
             <div className="section">
-              <label className="label">Välj tid</label>
+              <label className="label">Hur länge?</label>
+
               <div className="distance-mode-row">
                 <button
                   type="button"
@@ -838,7 +754,10 @@ function App() {
               </div>
 
               {timeMode === 'preset' ? (
-                <select value={targetMinutes} onChange={(e) => setTargetMinutes(Number(e.target.value))}>
+                <select
+                  value={targetMinutes}
+                  onChange={(e) => setTargetMinutes(Number(e.target.value))}
+                >
                   <option value={1}>1 minut</option>
                   <option value={3}>3 minuter</option>
                   <option value={5}>5 minuter</option>
@@ -849,7 +768,7 @@ function App() {
                   type="number"
                   min="1"
                   step="1"
-                  placeholder="Skriv egen tid i minuter"
+                  placeholder="Skriv tid i minuter"
                   value={customMinutes}
                   onChange={(e) => setCustomMinutes(e.target.value)}
                 />
@@ -857,21 +776,75 @@ function App() {
             </div>
           )}
 
-          {!childMode && (
-            <div className="players">
-              {players.map((player, index) => (
-                <div key={index} className="player-card">
-                  <div className="player-title">👤 Spelare {index + 1}</div>
+          {playMode === 'gps' && (
+            <div className="section">
+              <label className="label">Hur långt?</label>
 
-                  <input
-                    type="text"
-                    value={player.name}
-                    onChange={(e) => updatePlayer(index, 'name', e.target.value)}
-                    placeholder="Namn"
-                    disabled={player.locked}
-                  />
+              <div className="distance-mode-row">
+                <button
+                  type="button"
+                  className={distanceMode === 'preset' ? 'primary-button small-mode-button' : 'small-mode-button'}
+                  onClick={() => setDistanceMode('preset')}
+                >
+                  Fasta val
+                </button>
+                <button
+                  type="button"
+                  className={distanceMode === 'custom' ? 'primary-button small-mode-button' : 'small-mode-button'}
+                  onClick={() => setDistanceMode('custom')}
+                >
+                  Eget avstånd
+                </button>
+              </div>
 
-                  {!player.locked ? (
+              {distanceMode === 'preset' ? (
+                <select
+                  value={targetDistance}
+                  onChange={(e) => setTargetDistance(Number(e.target.value))}
+                >
+                  <option value={1}>1 km</option>
+                  <option value={2}>2 km</option>
+                  <option value={5}>5 km</option>
+                  <option value={10}>10 km</option>
+                </select>
+              ) : (
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Skriv avstånd i km"
+                  value={customDistance}
+                  onChange={(e) => setCustomDistance(e.target.value)}
+                />
+              )}
+            </div>
+          )}
+
+          <div className="players">
+            {players.map((player, index) => (
+              <div key={index} className="player-card">
+                <div className="player-title">👤 Spelare {index + 1}</div>
+
+                <input
+                  type="text"
+                  value={player.name}
+                  onChange={(e) => updatePlayer(index, 'name', e.target.value)}
+                  placeholder="Namn"
+                  disabled={player.locked}
+                />
+
+                {!player.locked ? (
+                  childMode ? (
+                    <>
+                      <input
+                        type="number"
+                        value={player.guess}
+                        onChange={(e) => updatePlayer(index, 'guess', e.target.value)}
+                        placeholder="Gissning"
+                      />
+                      <button onClick={() => lockGuess(index)}>Klar</button>
+                    </>
+                  ) : (
                     <div className="guess-row">
                       <input
                         type="number"
@@ -881,48 +854,16 @@ function App() {
                       />
                       <button onClick={() => lockGuess(index)}>Klar</button>
                     </div>
-                  ) : (
-                    <div className="locked-box">
-                      <span>✔ Gissning sparad</span>
-                      <span className="masked">***</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {childMode && (
-            <div className="players">
-              {players.map((player, index) => (
-                <div key={index} className="player-card">
-                  <div className="player-title">👤 Spelare {index + 1}</div>
-                  <input
-                    type="text"
-                    value={player.name}
-                    onChange={(e) => updatePlayer(index, 'name', e.target.value)}
-                    placeholder="Namn"
-                    disabled={player.locked}
-                  />
-                  <input
-                    type="number"
-                    value={player.guess}
-                    onChange={(e) => updatePlayer(index, 'guess', e.target.value)}
-                    placeholder="Gissning"
-                    disabled={player.locked}
-                  />
-                  {!player.locked ? (
-                    <button onClick={() => lockGuess(index)}>Klar</button>
-                  ) : (
-                    <div className="locked-box">
-                      <span>✔ Klar</span>
-                      <span className="masked">***</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                  )
+                ) : (
+                  <div className="locked-box">
+                    <span>✔ Gissning sparad</span>
+                    <span className="masked">***</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
 
           <div className="button-row">
             <button onClick={addPlayer}>+ Lägg till spelare</button>
@@ -942,22 +883,14 @@ function App() {
         <div className="card pop-in game-card-minimal">
           <div className="game-top">
             <div className="fun-badge bounce">
-              {playMode === 'time'
-                ? '⏱️ Timer-läge aktivt'
-                : travelMode === 'gps'
-                ? '📍 GPS-läge aktivt'
-                : '🚗 Manuellt läge'}
+              {playMode === 'time' ? '⏱️ Timer-läge aktivt' : '📍 GPS-läge aktivt'}
             </div>
 
-            {playMode === 'time' ? (
-              <div className="top-status-text">Tid kvar: {formatTime(timeLeft)}</div>
-            ) : (
-              <div className="top-status-text">
-                {travelMode === 'gps'
-                  ? gpsStatus
-                  : `${distance.toFixed(2)} / ${activeTargetDistance} km`}
-              </div>
-            )}
+            <div className="top-status-text">
+              {playMode === 'time'
+                ? `Tid kvar: ${formatTime(timeLeft)}`
+                : gpsStatus}
+            </div>
           </div>
 
           <div className="game-center">
@@ -970,13 +903,13 @@ function App() {
               <div className="progress-bar" style={{ width: `${progress}%` }} />
             </div>
 
-            <div className="tap-zone-wrap">
-              {playMode === 'distance' && travelMode === 'manual' && (
-                <button className="distance-button lower-button" onClick={handleDistanceClick}>
-                  +1 km
-                </button>
-              )}
+            {playMode === 'gps' && (
+              <div className="top-status-text small-status">
+                {distance.toFixed(2)} / {activeTargetDistance} km
+              </div>
+            )}
 
+            <div className="tap-zone-wrap">
               <button className="tap-zone-button" onClick={handleCountUp}>
                 +1 {selectedObject.toUpperCase()}
               </button>
@@ -1025,7 +958,7 @@ function App() {
           <p className="result-subtext">
             {playMode === 'time'
               ? `Spelad tid: ${activeTargetMinutes} min`
-              : `Spelad sträcka: ${activeTargetDistance} km`}
+              : `GPS-runda: ${activeTargetDistance} km`}
           </p>
 
           <div className="podium-list">
