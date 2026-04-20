@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
-const GAME_STORAGE_KEY = 'bilspel_state_v2'
-const SETTINGS_STORAGE_KEY = 'bilspel_settings_v2'
+const GAME_STORAGE_KEY = 'i_baksatet_game_state_v3'
+const SETTINGS_STORAGE_KEY = 'i_baksatet_settings_v3'
 
 function App() {
-  const [screen, setScreen] = useState('start')
+  const [screen, setScreen] = useState('start') // start | setup | game | result
   const [showResumePrompt, setShowResumePrompt] = useState(false)
   const [savedGame, setSavedGame] = useState(null)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const [objectType, setObjectType] = useState('lastbilar')
   const [customObject, setCustomObject] = useState('')
@@ -32,7 +33,6 @@ function App() {
   const [timeLeft, setTimeLeft] = useState(0)
   const [gpsStatus, setGpsStatus] = useState('GPS ej startad')
   const [isPaused, setIsPaused] = useState(false)
-  const [showConfetti, setShowConfetti] = useState(false)
 
   const watchIdRef = useRef(null)
   const lastPositionRef = useRef(null)
@@ -42,7 +42,9 @@ function App() {
   const hasLoadedStateRef = useRef(false)
 
   const selectedObject = useMemo(() => {
-    if (objectType === 'eget') return customObject.trim() || 'objekt'
+    if (objectType === 'eget') {
+      return customObject.trim() || 'objekt'
+    }
     return objectType
   }, [objectType, customObject])
 
@@ -76,18 +78,36 @@ function App() {
       : 0
   }, [playMode, activeTargetDistance, distance, activeTargetSeconds, timeLeft])
 
+  const latestSettingsExists = !!localStorage.getItem(SETTINGS_STORAGE_KEY)
+
   const allPlayersReady =
     players.length > 0 &&
     players.every(
       (player) => player.name.trim() !== '' && player.guess !== '' && player.locked
     )
 
-  const latestSettingsExists = !!localStorage.getItem(SETTINGS_STORAGE_KEY)
+  const sortedResults = [...players]
+    .map((player) => ({
+      ...player,
+      diff: Math.abs(Number(player.guess) - count),
+    }))
+    .sort((a, b) => a.diff - b.diff)
+
+  const winners = sortedResults.length
+    ? sortedResults.filter((player) => player.diff === sortedResults[0].diff)
+    : []
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${String(secs).padStart(2, '0')}`
+  }
+
+  const getMedal = (index) => {
+    if (index === 0) return '🥇'
+    if (index === 1) return '🥈'
+    if (index === 2) return '🥉'
+    return '⭐'
   }
 
   const toRadians = (value) => (value * Math.PI) / 180
@@ -165,7 +185,9 @@ function App() {
   }
 
   const buzz = (duration = 30) => {
-    if (navigator.vibrate) navigator.vibrate(duration)
+    if (navigator.vibrate) {
+      navigator.vibrate(duration)
+    }
   }
 
   const acquireWakeLock = async () => {
@@ -346,6 +368,16 @@ function App() {
 
     if (player.name.trim() === '' || player.guess === '') {
       alert('Fyll i namn och gissning innan du trycker Klar.')
+      return
+    }
+
+    if (!/^\d+$/.test(String(player.guess))) {
+      alert('Gissningen måste vara ett helt tal från 0 och uppåt.')
+      return
+    }
+
+    if (Number(player.guess) < 0) {
+      alert('Gissningen måste vara 0 eller högre.')
       return
     }
 
@@ -571,7 +603,7 @@ function App() {
     return () => {
       stopAllTracking()
     }
-  }, [screen, playMode, isPaused])
+  }, [screen, playMode, isPaused, timeLeft])
 
   useEffect(() => {
     const handleVisibility = async () => {
@@ -628,24 +660,6 @@ function App() {
     showResumePrompt,
   ])
 
-  const sortedResults = [...players]
-    .map((player) => ({
-      ...player,
-      diff: Math.abs(Number(player.guess) - count),
-    }))
-    .sort((a, b) => a.diff - b.diff)
-
-  const winners = sortedResults.length
-    ? sortedResults.filter((player) => player.diff === sortedResults[0].diff)
-    : []
-
-  const getMedal = (index) => {
-    if (index === 0) return '🥇'
-    if (index === 1) return '🥈'
-    if (index === 2) return '🥉'
-    return '⭐'
-  }
-
   return (
     <div className="app-shell">
       <div className="background-stars" aria-hidden="true">
@@ -696,9 +710,9 @@ function App() {
       )}
 
       {!showResumePrompt && screen === 'start' && (
-        <div className="card pop-in">
-          <div className="fun-badge bounce">🚗🎉 Kul i bilen!</div>
-          <h1>Bilbingo-utmaningen</h1>
+        <div className="card pop-in start-card">
+          <div className="fun-badge bounce">🎮 Spela tillsammans</div>
+          <h1 className="app-title">🚗 I baksätet</h1>
           <p className="subtitle">Gissa, räkna och vinn över familjen på bilresan!</p>
 
           <div className="hero-icons">
@@ -722,8 +736,8 @@ function App() {
 
       {!showResumePrompt && screen === 'setup' && (
         <div className="card pop-in">
-          <div className="fun-badge bounce">🛠️ Bygg er runda</div>
-          <h1>Ställ in spelet</h1>
+          <div className="fun-badge bounce">🛠️ Ställ in rundan</div>
+          <h1>I baksätet</h1>
 
           <div className="section">
             <label className="label">Vad ska ni räkna?</label>
@@ -871,8 +885,22 @@ function App() {
                   <div className="guess-row">
                     <input
                       type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
                       value={player.guess}
-                      onChange={(e) => updatePlayer(index, 'guess', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+
+                        if (value === '') {
+                          updatePlayer(index, 'guess', '')
+                          return
+                        }
+
+                        if (/^\d+$/.test(value)) {
+                          updatePlayer(index, 'guess', value)
+                        }
+                      }}
                       placeholder={`Gissning på antal ${selectedObject}`}
                     />
                     <button onClick={() => lockGuess(index)}>Klar</button>

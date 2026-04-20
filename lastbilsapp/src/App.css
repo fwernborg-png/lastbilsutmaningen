@@ -86,6 +86,10 @@ body {
   z-index: 1;
 }
 
+.start-card {
+  max-width: 980px;
+}
+
 .result-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 255, 0.98) 100%);
 }
@@ -96,6 +100,17 @@ h1 {
   font-size: 44px;
   line-height: 1.1;
   color: #213547;
+}
+
+.app-title {
+  font-size: 56px;
+  font-weight: 900;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #ff7eb3, #ffcc70, #7eff9f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .subtitle {
@@ -495,6 +510,10 @@ button:active {
 
   h1 {
     font-size: 34px;
+  }
+
+  .app-title {
+    font-size: 42px;
   }
 
   .subtitle {
