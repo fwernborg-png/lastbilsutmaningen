@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
-const GAME_STORAGE_KEY = 'i_baksatet_game_state_v3'
-const SETTINGS_STORAGE_KEY = 'i_baksatet_settings_v3'
+const GAME_STORAGE_KEY = 'i_baksatet_arcade_game_v1'
+const SETTINGS_STORAGE_KEY = 'i_baksatet_arcade_settings_v1'
 
 function App() {
-  const [screen, setScreen] = useState('start') // start | setup | game | result
+  const [screen, setScreen] = useState('start')
   const [showResumePrompt, setShowResumePrompt] = useState(false)
   const [savedGame, setSavedGame] = useState(null)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [scorePulse, setScorePulse] = useState(false)
 
   const [objectType, setObjectType] = useState('lastbilar')
   const [customObject, setCustomObject] = useState('')
@@ -42,9 +43,7 @@ function App() {
   const hasLoadedStateRef = useRef(false)
 
   const selectedObject = useMemo(() => {
-    if (objectType === 'eget') {
-      return customObject.trim() || 'objekt'
-    }
+    if (objectType === 'eget') return customObject.trim() || 'objekt'
     return objectType
   }, [objectType, customObject])
 
@@ -110,6 +109,14 @@ function App() {
     return '⭐'
   }
 
+  const getRoadIcon = () => {
+    if (selectedObject.toLowerCase().includes('lastbil')) return '🚚'
+    if (selectedObject.toLowerCase().includes('bil')) return '🚗'
+    if (selectedObject.toLowerCase().includes('skylt')) return '🛣️'
+    if (selectedObject.toLowerCase().includes('husbil')) return '🚐'
+    return '⭐'
+  }
+
   const toRadians = (value) => (value * Math.PI) / 180
 
   const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
@@ -140,15 +147,15 @@ function App() {
       const oscillator = ctx.createOscillator()
       const gain = ctx.createGain()
 
-      oscillator.type = 'sine'
-      oscillator.frequency.value = 720
+      oscillator.type = 'square'
+      oscillator.frequency.value = 780
       gain.gain.value = 0.02
 
       oscillator.connect(gain)
       gain.connect(ctx.destination)
 
       oscillator.start()
-      oscillator.stop(ctx.currentTime + 0.05)
+      oscillator.stop(ctx.currentTime + 0.04)
     } catch {
       // ignore
     }
@@ -173,7 +180,7 @@ function App() {
         osc.connect(gain)
         gain.connect(ctx.destination)
 
-        const start = ctx.currentTime + index * 0.1
+        const start = ctx.currentTime + index * 0.09
         const end = start + 0.16
 
         osc.start(start)
@@ -185,9 +192,12 @@ function App() {
   }
 
   const buzz = (duration = 30) => {
-    if (navigator.vibrate) {
-      navigator.vibrate(duration)
-    }
+    if (navigator.vibrate) navigator.vibrate(duration)
+  }
+
+  const pulseScore = () => {
+    setScorePulse(true)
+    window.setTimeout(() => setScorePulse(false), 180)
   }
 
   const acquireWakeLock = async () => {
@@ -318,6 +328,7 @@ function App() {
     setGpsStatus('GPS ej startad')
     setIsPaused(false)
     setShowConfetti(false)
+    setScorePulse(false)
   }
 
   const applySavedGame = (parsed) => {
@@ -503,6 +514,7 @@ function App() {
     setGpsStatus('GPS ej startad')
     setIsPaused(false)
     setShowConfetti(false)
+    setScorePulse(false)
     lastPositionRef.current = null
     setScreen('game')
     await acquireWakeLock()
@@ -511,6 +523,7 @@ function App() {
   const handleCountUp = () => {
     if (isPaused) return
     setCount((prev) => prev + 1)
+    pulseScore()
     buzz()
     playClickSound()
   }
@@ -548,6 +561,7 @@ function App() {
     setGpsStatus('GPS ej startad')
     setIsPaused(false)
     setShowConfetti(false)
+    setScorePulse(false)
     setScreen('setup')
   }
 
@@ -662,13 +676,21 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="background-stars" aria-hidden="true">
+      <div className="arcade-lights" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+
+      <div className="background-roadtrip" aria-hidden="true">
         <span>⭐</span>
         <span>✨</span>
+        <span>🛣️</span>
+        <span>🚗</span>
         <span>🌟</span>
-        <span>⭐</span>
-        <span>✨</span>
-        <span>🌟</span>
+        <span>🚚</span>
       </div>
 
       {showConfetti && (
@@ -689,12 +711,12 @@ function App() {
       )}
 
       {showResumePrompt && (
-        <div className="card pop-in">
-          <div className="fun-badge bounce">🧠 Sparat spel hittat</div>
-          <h1>Fortsätta spelet?</h1>
-          <p className="subtitle">Ett pågående spel hittades på den här mobilen.</p>
+        <div className="card arcade-card pop-in">
+          <div className="fun-badge arcade-badge bounce">🧠 Sparat spel hittat</div>
+          <h1>Fortsätta rundan?</h1>
+          <p className="subtitle">Ett pågående spel finns sparat på den här mobilen.</p>
 
-          <div className="guess-box">
+          <div className="guess-box arcade-panel">
             <p><strong>Antal:</strong> {savedGame?.count ?? 0}</p>
             <p><strong>Sträcka:</strong> {savedGame?.distance ?? 0} km</p>
             <p><strong>Tid kvar:</strong> {formatTime(savedGame?.timeLeft ?? 0)}</p>
@@ -710,9 +732,9 @@ function App() {
       )}
 
       {!showResumePrompt && screen === 'start' && (
-        <div className="card pop-in start-card">
-          <div className="fun-badge bounce">🎮 Spela tillsammans</div>
-          <h1 className="app-title">🚗 I baksätet</h1>
+        <div className="card arcade-card start-card pop-in">
+          <div className="fun-badge arcade-badge bounce">🎮 Road-trip arcade</div>
+          <h1 className="app-title">{getRoadIcon()} I baksätet</h1>
           <p className="subtitle">Gissa, räkna och vinn över familjen på bilresan!</p>
 
           <div className="hero-icons">
@@ -735,11 +757,11 @@ function App() {
       )}
 
       {!showResumePrompt && screen === 'setup' && (
-        <div className="card pop-in">
-          <div className="fun-badge bounce">🛠️ Ställ in rundan</div>
+        <div className="card arcade-card pop-in">
+          <div className="fun-badge arcade-badge bounce">🛠️ Bygg rundan</div>
           <h1>I baksätet</h1>
 
-          <div className="section">
+          <div className="section arcade-panel">
             <label className="label">Vad ska ni räkna?</label>
             <select value={objectType} onChange={(e) => setObjectType(e.target.value)}>
               <option value="lastbilar">Lastbilar</option>
@@ -760,7 +782,7 @@ function App() {
             )}
           </div>
 
-          <div className="section">
+          <div className="section arcade-panel">
             <label className="label">Hur vill ni spela?</label>
             <div className="distance-mode-row">
               <button
@@ -781,7 +803,7 @@ function App() {
           </div>
 
           {playMode === 'time' && (
-            <div className="section">
+            <div className="section arcade-panel">
               <label className="label">Hur länge?</label>
 
               <div className="distance-mode-row">
@@ -825,7 +847,7 @@ function App() {
           )}
 
           {playMode === 'gps' && (
-            <div className="section">
+            <div className="section arcade-panel">
               <label className="label">Hur långt?</label>
 
               <div className="distance-mode-row">
@@ -870,7 +892,7 @@ function App() {
 
           <div className="players">
             {players.map((player, index) => (
-              <div key={index} className="player-card">
+              <div key={index} className="player-card arcade-panel">
                 <div className="player-title">👤 Spelare {index + 1}</div>
 
                 <input
@@ -930,9 +952,9 @@ function App() {
       )}
 
       {!showResumePrompt && screen === 'game' && (
-        <div className="card pop-in game-card-minimal">
+        <div className="card arcade-card pop-in game-card-minimal">
           <div className="game-top">
-            <div className="fun-badge bounce">
+            <div className="fun-badge arcade-badge bounce">
               {playMode === 'time' ? '⏱️ Timer-läge aktivt' : '📍 GPS-läge aktivt'}
             </div>
 
@@ -942,11 +964,16 @@ function App() {
           </div>
 
           <div className="game-center">
-            <div className="count count-big-center">{count}</div>
+            <div className={`count count-big-center ${scorePulse ? 'score-pulse' : ''}`}>
+              {count}
+            </div>
+            <div className="object-hint">
+              {getRoadIcon()} {selectedObject}
+            </div>
           </div>
 
           <div className="game-bottom">
-            <div className="progress-container progress-lower">
+            <div className="progress-container progress-lower road-meter">
               <div className="progress-bar" style={{ width: `${progress}%` }} />
             </div>
 
@@ -957,7 +984,7 @@ function App() {
             )}
 
             <div className="tap-zone-wrap">
-              <button className="tap-zone-button" onClick={handleCountUp}>
+              <button className="tap-zone-button arcade-main-button" onClick={handleCountUp}>
                 +1 {selectedObject.toUpperCase()}
               </button>
             </div>
@@ -982,8 +1009,8 @@ function App() {
       )}
 
       {!showResumePrompt && screen === 'result' && (
-        <div className="card pop-in result-card">
-          <div className="fun-badge bounce">🏁 Rundan är klar!</div>
+        <div className="card arcade-card pop-in result-card">
+          <div className="fun-badge arcade-badge bounce">🏁 Rundan är klar!</div>
           <h1>🏆 Resultat</h1>
 
           <div className="winner-hero">
