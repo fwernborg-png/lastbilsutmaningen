@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
-const GAME_STORAGE_KEY = 'bilspel_state_v1'
-const SETTINGS_STORAGE_KEY = 'bilspel_settings_v1'
+const GAME_STORAGE_KEY = 'bilspel_state_v2'
+const SETTINGS_STORAGE_KEY = 'bilspel_settings_v2'
 
 function App() {
-  const [screen, setScreen] = useState('start') // start | setup | game | result
+  const [screen, setScreen] = useState('start')
   const [showResumePrompt, setShowResumePrompt] = useState(false)
   const [savedGame, setSavedGame] = useState(null)
 
@@ -32,6 +32,7 @@ function App() {
   const [timeLeft, setTimeLeft] = useState(0)
   const [gpsStatus, setGpsStatus] = useState('GPS ej startad')
   const [isPaused, setIsPaused] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const watchIdRef = useRef(null)
   const lastPositionRef = useRef(null)
@@ -41,9 +42,7 @@ function App() {
   const hasLoadedStateRef = useRef(false)
 
   const selectedObject = useMemo(() => {
-    if (objectType === 'eget') {
-      return customObject.trim() || 'objekt'
-    }
+    if (objectType === 'eget') return customObject.trim() || 'objekt'
     return objectType
   }, [objectType, customObject])
 
@@ -135,10 +134,38 @@ function App() {
     }
   }
 
-  const buzz = (duration = 30) => {
-    if (navigator.vibrate) {
-      navigator.vibrate(duration)
+  const playWinSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (!AudioCtx) return
+
+      const ctx = new AudioCtx()
+      const notes = [523.25, 659.25, 783.99, 1046.5]
+
+      notes.forEach((freq, index) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'triangle'
+        osc.frequency.value = freq
+        gain.gain.value = 0.03
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+
+        const start = ctx.currentTime + index * 0.1
+        const end = start + 0.16
+
+        osc.start(start)
+        osc.stop(end)
+      })
+    } catch {
+      // ignore
     }
+  }
+
+  const buzz = (duration = 30) => {
+    if (navigator.vibrate) navigator.vibrate(duration)
   }
 
   const acquireWakeLock = async () => {
@@ -268,6 +295,7 @@ function App() {
     setTimeLeft(0)
     setGpsStatus('GPS ej startad')
     setIsPaused(false)
+    setShowConfetti(false)
   }
 
   const applySavedGame = (parsed) => {
@@ -334,6 +362,13 @@ function App() {
     await releaseWakeLock()
     setIsPaused(false)
     setScreen('result')
+    setShowConfetti(true)
+    playWinSound()
+    buzz(200)
+
+    window.setTimeout(() => {
+      setShowConfetti(false)
+    }, 3000)
   }
 
   const startGpsTracking = () => {
@@ -435,6 +470,7 @@ function App() {
     setTimeLeft(activeTargetSeconds)
     setGpsStatus('GPS ej startad')
     setIsPaused(false)
+    setShowConfetti(false)
     lastPositionRef.current = null
     setScreen('game')
     await acquireWakeLock()
@@ -479,6 +515,7 @@ function App() {
     setTimeLeft(0)
     setGpsStatus('GPS ej startad')
     setIsPaused(false)
+    setShowConfetti(false)
     setScreen('setup')
   }
 
@@ -611,7 +648,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="background-stars">
+      <div className="background-stars" aria-hidden="true">
         <span>⭐</span>
         <span>✨</span>
         <span>🌟</span>
@@ -619,6 +656,23 @@ function App() {
         <span>✨</span>
         <span>🌟</span>
       </div>
+
+      {showConfetti && (
+        <div className="confetti-burst" aria-hidden="true">
+          <span>🎉</span>
+          <span>✨</span>
+          <span>🎊</span>
+          <span>⭐</span>
+          <span>🥳</span>
+          <span>🎉</span>
+          <span>🏆</span>
+          <span>✨</span>
+          <span>🎊</span>
+          <span>🎉</span>
+          <span>⭐</span>
+          <span>🥳</span>
+        </div>
+      )}
 
       {showResumePrompt && (
         <div className="card pop-in">
@@ -901,15 +955,7 @@ function App() {
 
       {!showResumePrompt && screen === 'result' && (
         <div className="card pop-in result-card">
-          <div className="confetti-row">
-            <span>🎉</span>
-            <span>✨</span>
-            <span>🎊</span>
-            <span>⭐</span>
-            <span>🎉</span>
-          </div>
-
-          <div className="fun-badge bounce">🏆 Rundan är klar!</div>
+          <div className="fun-badge bounce">🏁 Rundan är klar!</div>
           <h1>🏆 Resultat</h1>
 
           <div className="winner-hero">
