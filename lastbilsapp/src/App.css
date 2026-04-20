@@ -493,3 +493,22 @@ button:active {
     align-items: flex-start;
   }
 }
+.winner-label {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.winner-name {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #5d2db3;
+  word-break: break-word;
+}
+
+@media (max-width: 700px) {
+  .winner-name {
+    font-size: 32px;
+  }
+}

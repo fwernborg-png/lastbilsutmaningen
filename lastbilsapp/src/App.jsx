@@ -132,7 +132,44 @@ function App() {
       // ignore
     }
   }
+const playWinSound = () => {
+  try {
+    if (!audioContextRef.current) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (!AudioCtx) return
+      audioContextRef.current = new AudioCtx()
+    }
 
+    const ctx = audioContextRef.current
+    const now = ctx.currentTime
+
+    const notes = [523.25, 659.25, 783.99, 1046.5]
+
+    notes.forEach((freq, index) => {
+      const oscillator = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      oscillator.type = 'triangle'
+      oscillator.frequency.value = freq
+
+      gain.gain.setValueAtTime(0.0001, now + index * 0.12)
+      gain.gain.exponentialRampToValueAtTime(0.08, now + index * 0.12 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.12 + 0.22)
+
+      oscillator.connect(gain)
+      gain.connect(ctx.destination)
+
+      oscillator.start(now + index * 0.12)
+      oscillator.stop(now + index * 0.12 + 0.24)
+    })
+
+    if (navigator.vibrate) {
+      navigator.vibrate([120, 60, 120, 60, 180])
+    }
+  } catch {
+    // ignore
+  }
+}
   const buzz = (duration = 30) => {
     if (navigator.vibrate) navigator.vibrate(duration)
   }
@@ -326,6 +363,12 @@ function App() {
   }
 
   const finishGame = async () => {
+  stopAllTracking()
+  await releaseWakeLock()
+  setIsPaused(false)
+  playWinSound()
+  setScreen('result')
+}
     stopAllTracking()
     await releaseWakeLock()
     setIsPaused(false)
@@ -909,10 +952,18 @@ function App() {
           <h1>🏆 Resultat</h1>
 
           <div className="winner-hero">
-            {winners.length > 1
-              ? `🤝 Oavgjort: ${winners.map((w) => w.name).join(', ')}`
-              : `👑 Vinnare: ${winners[0]?.name || ''}`}
-          </div>
+  {winners.length > 1 ? (
+    <>
+      <div className="winner-label">🤝 Oavgjort</div>
+      <div className="winner-name">{winners.map((w) => w.name).join(', ')}</div>
+    </>
+  ) : (
+    <>
+      <div className="winner-label">👑 Vinnare</div>
+      <div className="winner-name">{winners[0]?.name || ''}</div>
+    </>
+  )}
+</div>
 
           <p className="result-main">
             Faktiskt antal {selectedObject}: {count}
