@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  font-family: 'Trebuchet MS', 'Arial', sans-serif;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
   background: linear-gradient(180deg, #8fd3ff 0%, #c8f1ff 45%, #fff4b8 100%);
 }
 
@@ -68,11 +68,6 @@ h1 {
   font-size: 44px;
   line-height: 1.1;
   color: #213547;
-}
-
-h3 {
-  margin-top: 0;
-  color: #2f4353;
 }
 
 .subtitle {
@@ -194,6 +189,10 @@ button {
   transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
 }
 
+button:hover {
+  filter: brightness(1.03);
+}
+
 button:active {
   transform: translateY(3px);
   box-shadow: 0 5px 0 #e0bd54;
@@ -209,13 +208,6 @@ button:active {
   background: linear-gradient(180deg, #9fd4ff 0%, #67b5ff 100%);
   color: white;
   box-shadow: 0 8px 0 #3f8ed8;
-}
-
-.distance-button {
-  width: 100%;
-  background: linear-gradient(180deg, #8cc9ff 0%, #5caeff 100%);
-  color: white;
-  box-shadow: 0 8px 0 #3d8dde;
 }
 
 .progress-container {
@@ -359,6 +351,10 @@ button:active {
   text-align: center;
 }
 
+.small-status {
+  font-size: 22px;
+}
+
 .game-center {
   flex: 1;
   display: flex;
@@ -366,15 +362,6 @@ button:active {
   justify-content: center;
   align-items: center;
   padding: 10px 0 20px;
-}
-
-.game-title {
-  font-size: 42px;
-  font-weight: 900;
-  color: #213547;
-  line-height: 1.1;
-  margin-bottom: 14px;
-  text-align: center;
 }
 
 .count {
@@ -417,12 +404,23 @@ button:active {
   box-shadow: 0 12px 0 #21ad4f;
 }
 
+.compact-actions {
+  margin-top: 2px;
+}
+
 .compact-actions button {
   flex: 1;
 }
 
-.child-mode .card {
-  max-width: 800px;
+.secondary-btn {
+  background: linear-gradient(180deg, #ffe28b 0%, #f4c94d 100%);
+  color: #213547;
+  box-shadow: 0 8px 0 #d4aa2d;
+}
+
+.undo-btn {
+  background: linear-gradient(180deg, #ffd0a8 0%, #ffb06b 100%);
+  box-shadow: 0 8px 0 #d98b49;
 }
 
 @keyframes popIn {
@@ -472,10 +470,6 @@ button:active {
     width: 100%;
   }
 
-  .game-title {
-    font-size: 32px;
-  }
-
   .count-big-center {
     font-size: 132px;
   }
@@ -491,24 +485,5 @@ button:active {
 
   .podium-item {
     align-items: flex-start;
-  }
-}
-.winner-label {
-  font-size: 24px;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.winner-name {
-  font-size: 42px;
-  font-weight: 900;
-  line-height: 1.1;
-  color: #5d2db3;
-  word-break: break-word;
-}
-
-@media (max-width: 700px) {
-  .winner-name {
-    font-size: 32px;
   }
 }

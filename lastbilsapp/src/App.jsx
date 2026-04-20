@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
-function App() {
-  const GAME_STORAGE_KEY = 'bilbingo-game-state-v5'
-  const SETTINGS_STORAGE_KEY = 'bilbingo-last-settings-v3'
+const GAME_STORAGE_KEY = 'bilspel_state_v1'
+const SETTINGS_STORAGE_KEY = 'bilspel_settings_v1'
 
-  const [screen, setScreen] = useState('start')
+function App() {
+  const [screen, setScreen] = useState('start') // start | setup | game | result
   const [showResumePrompt, setShowResumePrompt] = useState(false)
   const [savedGame, setSavedGame] = useState(null)
 
@@ -41,7 +41,9 @@ function App() {
   const hasLoadedStateRef = useRef(false)
 
   const selectedObject = useMemo(() => {
-    if (objectType === 'eget') return customObject.trim() || 'objekt'
+    if (objectType === 'eget') {
+      return customObject.trim() || 'objekt'
+    }
     return objectType
   }, [objectType, customObject])
 
@@ -120,7 +122,7 @@ function App() {
       const gain = ctx.createGain()
 
       oscillator.type = 'sine'
-      oscillator.frequency.value = 700
+      oscillator.frequency.value = 720
       gain.gain.value = 0.02
 
       oscillator.connect(gain)
@@ -132,46 +134,11 @@ function App() {
       // ignore
     }
   }
-const playWinSound = () => {
-  try {
-    if (!audioContextRef.current) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-      audioContextRef.current = new AudioCtx()
-    }
 
-    const ctx = audioContextRef.current
-    const now = ctx.currentTime
-
-    const notes = [523.25, 659.25, 783.99, 1046.5]
-
-    notes.forEach((freq, index) => {
-      const oscillator = ctx.createOscillator()
-      const gain = ctx.createGain()
-
-      oscillator.type = 'triangle'
-      oscillator.frequency.value = freq
-
-      gain.gain.setValueAtTime(0.0001, now + index * 0.12)
-      gain.gain.exponentialRampToValueAtTime(0.08, now + index * 0.12 + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.12 + 0.22)
-
-      oscillator.connect(gain)
-      gain.connect(ctx.destination)
-
-      oscillator.start(now + index * 0.12)
-      oscillator.stop(now + index * 0.12 + 0.24)
-    })
-
-    if (navigator.vibrate) {
-      navigator.vibrate([120, 60, 120, 60, 180])
-    }
-  } catch {
-    // ignore
-  }
-}
   const buzz = (duration = 30) => {
-    if (navigator.vibrate) navigator.vibrate(duration)
+    if (navigator.vibrate) {
+      navigator.vibrate(duration)
+    }
   }
 
   const acquireWakeLock = async () => {
@@ -255,7 +222,7 @@ const playWinSound = () => {
       if (parsed.targetDistance !== undefined) setTargetDistance(parsed.targetDistance)
       if (parsed.customDistance !== undefined) setCustomDistance(parsed.customDistance)
 
-      if (parsed.players && Array.isArray(parsed.players) && parsed.players.length > 0) {
+      if (Array.isArray(parsed.players) && parsed.players.length > 0) {
         setPlayers(
           parsed.players.map((player, index) => ({
             name: player.name || `Spelare ${index + 1}`,
@@ -314,7 +281,7 @@ const playWinSound = () => {
     if (parsed.distanceMode) setDistanceMode(parsed.distanceMode)
     if (parsed.targetDistance !== undefined) setTargetDistance(parsed.targetDistance)
     if (parsed.customDistance !== undefined) setCustomDistance(parsed.customDistance)
-    if (parsed.players) setPlayers(parsed.players)
+    if (Array.isArray(parsed.players)) setPlayers(parsed.players)
     if (parsed.count !== undefined) setCount(parsed.count)
     if (parsed.distance !== undefined) setDistance(parsed.distance)
     if (parsed.timeLeft !== undefined) setTimeLeft(parsed.timeLeft)
@@ -363,12 +330,6 @@ const playWinSound = () => {
   }
 
   const finishGame = async () => {
-  stopAllTracking()
-  await releaseWakeLock()
-  setIsPaused(false)
-  playWinSound()
-  setScreen('result')
-}
     stopAllTracking()
     await releaseWakeLock()
     setIsPaused(false)
@@ -952,18 +913,10 @@ const playWinSound = () => {
           <h1>🏆 Resultat</h1>
 
           <div className="winner-hero">
-  {winners.length > 1 ? (
-    <>
-      <div className="winner-label">🤝 Oavgjort</div>
-      <div className="winner-name">{winners.map((w) => w.name).join(', ')}</div>
-    </>
-  ) : (
-    <>
-      <div className="winner-label">👑 Vinnare</div>
-      <div className="winner-name">{winners[0]?.name || ''}</div>
-    </>
-  )}
-</div>
+            {winners.length > 1
+              ? `🤝 Oavgjort: ${winners.map((w) => w.name).join(', ')}`
+              : `👑 Vinnare: ${winners[0]?.name || ''}`}
+          </div>
 
           <p className="result-main">
             Faktiskt antal {selectedObject}: {count}
