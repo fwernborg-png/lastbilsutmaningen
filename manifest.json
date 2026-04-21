@@ -1,7 +1,7 @@
 {
   "name": "I baksätet",
   "short_name": "I baksätet",
-  "start_url": "/",
+  "start_url": "/lastbilsutmaningen/",
   "display": "standalone",
   "background_color": "#16233b",
   "theme_color": "#16233b",
