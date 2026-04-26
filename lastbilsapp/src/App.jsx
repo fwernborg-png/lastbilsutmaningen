@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
 const categories = {
@@ -15,11 +15,24 @@ const categories = {
   vindkraftverk: { label: "vindkraftverk", icon: "🌬️" },
 };
 
+const timeOptions = [
+  { label: "1 minut", seconds: 60 },
+  { label: "3 minuter", seconds: 180 },
+  { label: "5 minuter", seconds: 300 },
+  { label: "10 minuter", seconds: 600 },
+  { label: "Egen tid", seconds: -1 },
+];
+
 export default function App() {
   const [screen, setScreen] = useState("start");
   const [category, setCategory] = useState("roda_bilar");
   const [customCategory, setCustomCategory] = useState("");
   const [count, setCount] = useState(0);
+
+  const [timeChoice, setTimeChoice] = useState(180);
+  const [customMinutes, setCustomMinutes] = useState(4);
+  const [timeLeft, setTimeLeft] = useState(180);
+  const [isPaused, setIsPaused] = useState(false);
 
   const [players, setPlayers] = useState([
     { name: "Spelare 1", guess: "", locked: false },
@@ -33,6 +46,18 @@ export default function App() {
 
   const objectIcon = category === "custom" ? "✏️" : categories[category].icon;
 
+  const totalSeconds = useMemo(() => {
+    if (timeChoice === -1) {
+      return Math.max(1, Number(customMinutes || 1)) * 60;
+    }
+    return Number(timeChoice);
+  }, [timeChoice, customMinutes]);
+
+  const progressPercent = useMemo(() => {
+    if (screen !== "game") return 0;
+    return Math.min(((totalSeconds - timeLeft) / totalSeconds) * 100, 100);
+  }, [screen, totalSeconds, timeLeft]);
+
   const results = useMemo(() => {
     return [...players]
       .map((player) => ({
@@ -41,6 +66,12 @@ export default function App() {
       }))
       .sort((a, b) => a.diff - b.diff);
   }, [players, count]);
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}:${String(rest).padStart(2, "0")}`;
+  };
 
   const updatePlayer = (index, field, value) => {
     setPlayers((current) => {
@@ -96,11 +127,20 @@ export default function App() {
     }
 
     setCount(0);
+    setTimeLeft(totalSeconds);
+    setIsPaused(false);
     setScreen("game");
+  };
+
+  const finishRound = () => {
+    setIsPaused(false);
+    setScreen("result");
   };
 
   const newGame = () => {
     setCount(0);
+    setTimeLeft(totalSeconds);
+    setIsPaused(false);
     setPlayers((current) =>
       current.map((player, index) => ({
         name: player.name || `Spelare ${index + 1}`,
@@ -110,6 +150,22 @@ export default function App() {
     );
     setScreen("start");
   };
+
+  useEffect(() => {
+    if (screen !== "game") return;
+    if (isPaused) return;
+
+    if (timeLeft <= 0) {
+      finishRound();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTimeLeft((current) => current - 1);
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [screen, isPaused, timeLeft]);
 
   return (
     <div className="app-shell">
@@ -124,7 +180,7 @@ export default function App() {
           <section className="panel">
             <p className="tagline">Gissa, räkna och vinn över familjen på bilresan!</p>
 
-            <button className="primary-button" onClick={() => setScreen("setup")}> 
+            <button className="primary-button" onClick={() => setScreen("setup")}>
               ▶ STARTA SPEL
               <span>Den närmaste gissningen vinner 🏆</span>
             </button>
@@ -161,6 +217,35 @@ export default function App() {
 
           <p className="chosen">
             Ni räknar: <strong>{objectIcon} {objectName}</strong>
+          </p>
+
+          <label htmlFor="timeChoice">Hur länge?</label>
+          <select
+            id="timeChoice"
+            value={timeChoice}
+            onChange={(event) => setTimeChoice(Number(event.target.value))}
+          >
+            {timeOptions.map((option) => (
+              <option key={option.seconds} value={option.seconds}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          {timeChoice === -1 && (
+            <input
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={customMinutes}
+              onChange={(event) => setCustomMinutes(event.target.value)}
+              placeholder="Egen tid i minuter"
+            />
+          )}
+
+          <p className="chosen">
+            Speltid: <strong>{formatTime(totalSeconds)}</strong>
           </p>
 
           <h2>Spelare</h2>
@@ -216,6 +301,12 @@ export default function App() {
           <h1>{objectIcon} Räkna!</h1>
           <p>Tryck varje gång ni ser {objectName}.</p>
 
+          <div className="timer-box">⏱️ {formatTime(timeLeft)}</div>
+
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+
           <div className="count-number">{count}</div>
 
           <button className="count-button" onClick={() => setCount((value) => value + 1)}>
@@ -226,7 +317,11 @@ export default function App() {
             Ångra -1
           </button>
 
-          <button className="primary-button" onClick={() => setScreen("result")}>Avsluta runda</button>
+          <button className="secondary-button" onClick={() => setIsPaused((value) => !value)}>
+            {isPaused ? "Fortsätt" : "Pausa"}
+          </button>
+
+          <button className="primary-button" onClick={finishRound}>Avsluta runda</button>
           <button className="ghost-button" onClick={newGame}>Avbryt</button>
         </main>
       )}
