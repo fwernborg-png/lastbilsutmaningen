@@ -178,7 +178,9 @@ export default function App() {
           />
 
           <section className="panel">
-            <p className="tagline">Gissa, räkna och vinn över familjen på bilresan!</p>
+          <p className="tagline">
+  🚗 Perfekt spel i bilen
+</p>
 
             <button className="primary-button" onClick={() => setScreen("setup")}>
               ▶ STARTA SPEL
@@ -299,7 +301,9 @@ export default function App() {
       {screen === "game" && (
         <main className="screen-card panel game-screen">
           <h1>{objectIcon} Räkna!</h1>
-          <p>Tryck varje gång ni ser {objectName}.</p>
+          <p className="instruction">
+  Tryck varje gång ni ser <strong>{objectName}</strong>
+</p>
 
           <div className="timer-box">⏱️ {formatTime(timeLeft)}</div>
 

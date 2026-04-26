@@ -233,4 +233,69 @@ html, body {
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #ff2f91, #ff9f2e);
+}.hero-title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.tagline {
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.instruction {
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.panel {
+  backdrop-filter: blur(8px);
+}
+
+.primary-button {
+  box-shadow: 0 8px 0 rgba(0,0,0,0.25);
+  transition: transform 0.1s;
+}
+
+.primary-button:active {
+  transform: translateY(2px);
+}
+
+.count-button {
+  box-shadow: 0 10px 0 rgba(0,0,0,0.25);
+}
+
+.player-box input {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.locked-box {
+  text-align: center;
+}
+
+.timer-box {
+  font-size: 20px;
+}.start-btn {
+  min-height: 78px;
+  font-size: 22px;
+  border-radius: 22px;
+  box-shadow: 0 12px 0 rgba(0,0,0,0.25);
+  transition: all 0.1s ease;
+}
+
+.start-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+}.hero-img {
+  border-radius: 26px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}.panel {
+  padding: 24px;
 }
