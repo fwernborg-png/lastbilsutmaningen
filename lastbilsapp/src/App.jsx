@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const categories = {
@@ -23,21 +23,40 @@ const timeOptions = [
   { label: "Egen tid", seconds: -1 },
 ];
 
+const distanceOptions = [
+  { label: "1 km", km: 1 },
+  { label: "2 km", km: 2 },
+  { label: "5 km", km: 5 },
+  { label: "10 km", km: 10 },
+  { label: "Eget avstånd", km: -1 },
+];
+
 export default function App() {
   const [screen, setScreen] = useState("start");
   const [category, setCategory] = useState("roda_bilar");
   const [customCategory, setCustomCategory] = useState("");
   const [count, setCount] = useState(0);
 
+  const [playMode, setPlayMode] = useState("time");
+
   const [timeChoice, setTimeChoice] = useState(180);
   const [customMinutes, setCustomMinutes] = useState(4);
   const [timeLeft, setTimeLeft] = useState(180);
   const [isPaused, setIsPaused] = useState(false);
 
+  const [distanceChoice, setDistanceChoice] = useState(2);
+  const [customKm, setCustomKm] = useState(3);
+  const [distance, setDistance] = useState(0);
+  const [gpsStatus, setGpsStatus] = useState("GPS ej startad");
+
   const [players, setPlayers] = useState([
     { name: "Spelare 1", guess: "", locked: false },
     { name: "Spelare 2", guess: "", locked: false },
   ]);
+
+  const watchIdRef = useRef(null);
+  const lastPositionRef = useRef(null);
+  const finishingRef = useRef(false);
 
   const objectName =
     category === "custom"
@@ -53,10 +72,22 @@ export default function App() {
     return Number(timeChoice);
   }, [timeChoice, customMinutes]);
 
+  const targetKm = useMemo(() => {
+    if (distanceChoice === -1) {
+      return Math.max(0.1, Number(customKm || 0.1));
+    }
+    return Number(distanceChoice);
+  }, [distanceChoice, customKm]);
+
   const progressPercent = useMemo(() => {
     if (screen !== "game") return 0;
-    return Math.min(((totalSeconds - timeLeft) / totalSeconds) * 100, 100);
-  }, [screen, totalSeconds, timeLeft]);
+
+    if (playMode === "time") {
+      return Math.min(((totalSeconds - timeLeft) / totalSeconds) * 100, 100);
+    }
+
+    return Math.min((distance / targetKm) * 100, 100);
+  }, [screen, playMode, totalSeconds, timeLeft, distance, targetKm]);
 
   const results = useMemo(() => {
     return [...players]
@@ -71,6 +102,109 @@ export default function App() {
     const minutes = Math.floor(seconds / 60);
     const rest = seconds % 60;
     return `${minutes}:${String(rest).padStart(2, "0")}`;
+  };
+
+  const toRadians = (value) => (value * Math.PI) / 180;
+
+  const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+    const earthRadius = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+    return earthRadius * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+
+  const stopGps = () => {
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    watchIdRef.current = null;
+    lastPositionRef.current = null;
+  };
+
+  const finishRound = () => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+
+    stopGps();
+    setIsPaused(false);
+    setScreen("result");
+
+    window.setTimeout(() => {
+      finishingRef.current = false;
+    }, 500);
+  };
+
+  const startGps = () => {
+    if (!navigator.geolocation) {
+      setGpsStatus("GPS stöds inte på denna enhet");
+      return;
+    }
+
+    stopGps();
+    lastPositionRef.current = null;
+    setGpsStatus("Startar GPS...");
+
+    try {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+
+          if (accuracy > 100) {
+            setGpsStatus("Väntar på bättre GPS-signal...");
+            return;
+          }
+
+          if (!lastPositionRef.current) {
+            lastPositionRef.current = { latitude, longitude };
+            setGpsStatus("GPS aktiv");
+            return;
+          }
+
+          const kmMoved = getDistanceKm(
+            lastPositionRef.current.latitude,
+            lastPositionRef.current.longitude,
+            latitude,
+            longitude
+          );
+
+          if (kmMoved < 0.01) return;
+
+          setDistance((currentDistance) => {
+            const nextDistance = Number((currentDistance + kmMoved).toFixed(2));
+
+            if (nextDistance >= targetKm) {
+              window.setTimeout(() => finishRound(), 0);
+            }
+
+            return nextDistance;
+          });
+
+          lastPositionRef.current = { latitude, longitude };
+          setGpsStatus("GPS aktiv");
+        },
+        (error) => {
+          if (error.code === 1) setGpsStatus("Platsåtkomst nekad");
+          else if (error.code === 2) setGpsStatus("Position saknas");
+          else if (error.code === 3) setGpsStatus("GPS tog för lång tid");
+          else setGpsStatus("GPS-fel");
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 1000,
+          timeout: 10000,
+        }
+      );
+    } catch {
+      setGpsStatus("GPS kunde inte startas");
+    }
   };
 
   const updatePlayer = (index, field, value) => {
@@ -126,21 +260,28 @@ export default function App() {
       return;
     }
 
+    finishingRef.current = false;
     setCount(0);
+    setDistance(0);
     setTimeLeft(totalSeconds);
     setIsPaused(false);
+    setGpsStatus("GPS ej startad");
     setScreen("game");
-  };
 
-  const finishRound = () => {
-    setIsPaused(false);
-    setScreen("result");
+    if (playMode === "gps") {
+      window.setTimeout(() => startGps(), 300);
+    } else {
+      stopGps();
+    }
   };
 
   const newGame = () => {
+    stopGps();
     setCount(0);
+    setDistance(0);
     setTimeLeft(totalSeconds);
     setIsPaused(false);
+    setGpsStatus("GPS ej startad");
     setPlayers((current) =>
       current.map((player, index) => ({
         name: player.name || `Spelare ${index + 1}`,
@@ -151,8 +292,19 @@ export default function App() {
     setScreen("start");
   };
 
+  const togglePause = () => {
+    const nextPaused = !isPaused;
+    setIsPaused(nextPaused);
+
+    if (playMode === "gps") {
+      if (nextPaused) stopGps();
+      else startGps();
+    }
+  };
+
   useEffect(() => {
     if (screen !== "game") return;
+    if (playMode !== "time") return;
     if (isPaused) return;
 
     if (timeLeft <= 0) {
@@ -165,7 +317,11 @@ export default function App() {
     }, 1000);
 
     return () => window.clearTimeout(timer);
-  }, [screen, isPaused, timeLeft]);
+  }, [screen, playMode, isPaused, timeLeft]);
+
+  useEffect(() => {
+    return () => stopGps();
+  }, []);
 
   return (
     <div className="app-shell">
@@ -178,13 +334,11 @@ export default function App() {
           />
 
           <section className="panel">
-          <p className="tagline">
-  🚗 Perfekt spel i bilen
-</p>
+            <p className="tagline">🚗 Perfekt spel i bilen</p>
 
             <button className="primary-button" onClick={() => setScreen("setup")}>
               ▶ STARTA SPEL
-              <span>Den närmaste gissningen vinner 🏆</span>
+              <span>🏆 Närmast vinner</span>
             </button>
           </section>
         </main>
@@ -221,34 +375,89 @@ export default function App() {
             Ni räknar: <strong>{objectIcon} {objectName}</strong>
           </p>
 
-          <label htmlFor="timeChoice">Hur länge?</label>
-          <select
-            id="timeChoice"
-            value={timeChoice}
-            onChange={(event) => setTimeChoice(Number(event.target.value))}
-          >
-            {timeOptions.map((option) => (
-              <option key={option.seconds} value={option.seconds}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <label>Hur vill ni spela?</label>
+          <div className="mode-row">
+            <button
+              type="button"
+              className={playMode === "time" ? "active" : ""}
+              onClick={() => setPlayMode("time")}
+            >
+              ⏱️ Tid
+            </button>
+            <button
+              type="button"
+              className={playMode === "gps" ? "active" : ""}
+              onClick={() => setPlayMode("gps")}
+            >
+              📍 GPS
+            </button>
+          </div>
 
-          {timeChoice === -1 && (
-            <input
-              type="number"
-              min="1"
-              step="1"
-              inputMode="numeric"
-              value={customMinutes}
-              onChange={(event) => setCustomMinutes(event.target.value)}
-              placeholder="Egen tid i minuter"
-            />
+          {playMode === "time" && (
+            <>
+              <label htmlFor="timeChoice">Hur länge?</label>
+              <select
+                id="timeChoice"
+                value={timeChoice}
+                onChange={(event) => setTimeChoice(Number(event.target.value))}
+              >
+                {timeOptions.map((option) => (
+                  <option key={option.seconds} value={option.seconds}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              {timeChoice === -1 && (
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  value={customMinutes}
+                  onChange={(event) => setCustomMinutes(event.target.value)}
+                  placeholder="Egen tid i minuter"
+                />
+              )}
+
+              <p className="chosen">
+                Speltid: <strong>{formatTime(totalSeconds)}</strong>
+              </p>
+            </>
           )}
 
-          <p className="chosen">
-            Speltid: <strong>{formatTime(totalSeconds)}</strong>
-          </p>
+          {playMode === "gps" && (
+            <>
+              <label htmlFor="distanceChoice">Hur långt?</label>
+              <select
+                id="distanceChoice"
+                value={distanceChoice}
+                onChange={(event) => setDistanceChoice(Number(event.target.value))}
+              >
+                {distanceOptions.map((option) => (
+                  <option key={option.km} value={option.km}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              {distanceChoice === -1 && (
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  inputMode="decimal"
+                  value={customKm}
+                  onChange={(event) => setCustomKm(event.target.value)}
+                  placeholder="Eget avstånd i km"
+                />
+              )}
+
+              <p className="chosen">
+                GPS-runda: <strong>{targetKm} km</strong>
+              </p>
+            </>
+          )}
 
           <h2>Spelare</h2>
 
@@ -301,11 +510,15 @@ export default function App() {
       {screen === "game" && (
         <main className="screen-card panel game-screen">
           <h1>{objectIcon} Räkna!</h1>
-          <p className="instruction">
-  Tryck varje gång ni ser <strong>{objectName}</strong>
-</p>
+          <p>Tryck varje gång ni ser {objectName}.</p>
 
-          <div className="timer-box">⏱️ {formatTime(timeLeft)}</div>
+          {playMode === "time" ? (
+            <div className="timer-box">⏱️ {formatTime(timeLeft)}</div>
+          ) : (
+            <div className="timer-box">📍 {distance.toFixed(2)} / {targetKm} km</div>
+          )}
+
+          {playMode === "gps" && <p className="gps-status">{gpsStatus}</p>}
 
           <div className="progress-track">
             <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
@@ -321,7 +534,7 @@ export default function App() {
             Ångra -1
           </button>
 
-          <button className="secondary-button" onClick={() => setIsPaused((value) => !value)}>
+          <button className="secondary-button" onClick={togglePause}>
             {isPaused ? "Fortsätt" : "Pausa"}
           </button>
 

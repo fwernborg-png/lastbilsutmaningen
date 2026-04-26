@@ -298,4 +298,17 @@ html, body {
   box-shadow: 0 10px 40px rgba(0,0,0,0.4);
 }.panel {
   padding: 24px;
+}.mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mode-row button.active {
+  background: linear-gradient(90deg, #ff2f91, #ff9f2e);
+}
+
+.gps-status {
+  font-size: 14px;
+  opacity: 0.85;
 }
