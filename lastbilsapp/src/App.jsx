@@ -25,8 +25,8 @@ function App() {
   const [customDistance, setCustomDistance] = useState('')
 
   const [players, setPlayers] = useState([
-    { name: 'Spelare 1', guess: '', locked: false },
-    { name: 'Spelare 2', guess: '', locked: false },
+    { name: '', guess: '', locked: false },
+    { name: '', guess: '', locked: false },
   ])
 
   const [count, setCount] = useState(0)
@@ -319,8 +319,8 @@ function App() {
     setTargetDistance(5)
     setCustomDistance('')
     setPlayers([
-      { name: 'Spelare 1', guess: '', locked: false },
-      { name: 'Spelare 2', guess: '', locked: false },
+      { name: '', guess: '', locked: false },
+      { name: '', guess: '', locked: false },
     ])
     setCount(0)
     setDistance(0)
@@ -366,7 +366,7 @@ function App() {
     setPlayers([
       ...players,
       {
-        name: `Spelare ${players.length + 1}`,
+        name: '',
         guess: '',
         locked: false,
       },
@@ -893,13 +893,13 @@ function App() {
           <div className="players">
             {players.map((player, index) => (
               <div key={index} className="player-card arcade-panel">
-                <div className="player-title">👤 Spelare {index + 1}</div>
+                <div className="player-title">👤 Namn</div>
 
                 <input
                   type="text"
                   value={player.name}
                   onChange={(e) => updatePlayer(index, 'name', e.target.value)}
-                  placeholder="Namn"
+                  placeholder="Skriv ditt namn"
                   disabled={player.locked}
                 />
 
