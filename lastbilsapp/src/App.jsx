@@ -734,7 +734,7 @@ function App() {
       {!showResumePrompt && screen === 'start' && (
         <div className="card arcade-card start-card pop-in">
           <div className="fun-badge arcade-badge bounce">🎮 Road-trip arcade</div>
-          <h1 className="app-title">{getRoadIcon()} I baksätet</h1>
+          <h1 className="app-title">{getRoadIcon()} Bilsemester</h1>
           <p className="subtitle">Gissa, räkna och vinn över familjen på bilresan!</p>
 
           <div className="hero-icons">
@@ -759,7 +759,7 @@ function App() {
       {!showResumePrompt && screen === 'setup' && (
         <div className="card arcade-card pop-in">
           <div className="fun-badge arcade-badge bounce">🛠️ Bygg rundan</div>
-          <h1>I baksätet</h1>
+          <h1>Bilsemester</h1>
 
           <div className="section arcade-panel">
             <label className="label">Vad ska ni räkna?</label>
