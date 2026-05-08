@@ -13,6 +13,7 @@ body,
 
 body {
   color: white;
+  overscroll-behavior: none;
 }
 
 button,
@@ -36,19 +37,21 @@ select {
   max-width: 420px;
 }
 
+.panel {
+  background: rgba(10, 20, 70, 0.95);
+  border-radius: 26px;
+  padding: 24px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
 .hero-img {
   width: 100%;
   max-width: 320px;
   display: block;
   margin: 0 auto 18px;
-  border-radius: 22px;
-}
-
-.panel {
-  background: rgba(10, 20, 70, 0.95);
   border-radius: 26px;
-  padding: 20px;
-  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
 }
 
 h1 {
@@ -64,11 +67,6 @@ h2 {
 p {
   margin: 0 0 14px;
   line-height: 1.35;
-}
-
-.tagline {
-  font-size: 17px;
-  font-weight: 800;
 }
 
 label {
@@ -97,13 +95,20 @@ input::placeholder {
 button {
   width: 100%;
   border: none;
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: 999px;
+  padding: 16px 20px;
   margin-top: 10px;
-  font-size: 16px;
+  margin-bottom: 10px;
+  font-size: 20px;
   font-weight: 900;
   color: white;
-  background: rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, #ff7a18, #e84118);
+  box-shadow: 0 6px 0 #a62d0f, 0 10px 18px rgba(0,0,0,0.3);
+}
+
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 #a62d0f;
 }
 
 .primary-button {
@@ -119,16 +124,19 @@ button {
   opacity: 0.92;
 }
 
-.secondary-button {
+.secondary-button,
+.ghost-button {
   background: rgba(255,255,255,0.16);
 }
 
-.ghost-button {
-  background: rgba(255,255,255,0.08);
+.mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
-.chosen {
-  font-weight: 800;
+.mode-row button.active {
+  background: linear-gradient(90deg, #ff2f91, #ff9f2e);
 }
 
 .player-box {
@@ -138,12 +146,18 @@ button {
   margin-bottom: 14px;
 }
 
+.player-box input {
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .locked-box {
   display: grid;
   gap: 8px;
   background: rgba(255,255,255,0.12);
   border-radius: 16px;
   padding: 12px;
+  text-align: center;
 }
 
 .locked-box span {
@@ -151,8 +165,27 @@ button {
   letter-spacing: 4px;
 }
 
-.game-screen p {
-  font-weight: 800;
+.timer-box {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  font-size: 20px;
+  font-weight: 900;
+  margin: 8px 0 12px;
+}
+
+.progress-track {
+  height: 12px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 10px 0 16px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff2f91, #ff9f2e);
 }
 
 .count-number {
@@ -169,6 +202,7 @@ button {
   background: linear-gradient(180deg, #7eff9f, #37d96c);
   color: #062b17;
   font-size: 54px;
+  box-shadow: 0 10px 0 rgba(0,0,0,0.25);
 }
 
 .winner-box {
@@ -188,7 +222,48 @@ button {
   margin-top: 10px;
 }
 
-@media (max-width: 480px) {
+/* Startsidans kort */
+.pro-home-panel {
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.pro-feature-card {
+  background: linear-gradient(180deg, #ffffff, #eef3ff);
+  padding: 20px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+  margin-bottom: 14px;
+  border: 2px solid #ffffff;
+}
+
+.pro-feature-card:active {
+  transform: scale(0.98);
+}
+
+.pro-feature-card span {
+  font-size: 34px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.pro-feature-card strong {
+  display: block;
+  font-size: 25px;
+  font-weight: 900;
+  color: #1f2a44;
+  margin-bottom: 6px;
+}
+
+.pro-feature-card small {
+  display: block;
+  font-size: 19px;
+  color: #5a6b8a;
+}
+
+/* Mobil */
+@media (max-width: 500px) {
   .app-shell {
     padding: 14px;
     align-items: center;
@@ -196,6 +271,15 @@ button {
 
   .panel {
     padding: 18px;
+  }
+
+  .hero {
+    padding-top: 40px;
+  }
+
+  h1 {
+    font-size: 42px !important;
+    line-height: 1.1;
   }
 
   .hero-img {
@@ -211,104 +295,698 @@ button {
     font-size: 48px;
   }
 }
-html, body {
-  overscroll-behavior: none;
-}.timer-box {
-  display: inline-block;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.14);
-  font-weight: 900;
-  margin: 8px 0 12px;
+/* FIX mobil top spacing */
+.pro-home {
+  padding-top: env(safe-area-inset-top);
 }
 
-.progress-track {
-  height: 12px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 999px;
+.pro-hero-card {
+  padding-top: 20px;
+}
+@media (max-width: 500px) {
+  .pro-hero-img {
+    margin-top: 10px;
+  }
+}
+/* Centrera appen på stora skärmar */
+.pro-home {
+  max-width: 420px;
+  margin: 0 auto;
+}
+.pro-home {
+  max-width: 420px;
+  margin: 0 auto;
+  background: #111a4d;
+  border-radius: 24px;
   overflow: hidden;
-  margin: 10px 0 16px;
+}
+/* Desktop + mobil: rätt bredd på startsidan */
+.pro-home {
+  width: min(100%, 430px);
+  max-width: 430px;
+  margin: 0 auto;
 }
 
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #ff2f91, #ff9f2e);
-}.hero-title {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 900;
+.pro-hero-card,
+.pro-home-panel {
+  width: 100%;
+}
+
+.pro-hero-img {
+  width: 100%;
+  max-width: none;
+  display: block;
+}
+/* Mobil: få allt att rymmas bättre */
+@media (max-width: 500px) {
+  .app-shell {
+    padding: 8px;
+    align-items: flex-start;
+  }
+
+  .pro-home {
+    width: 100%;
+    max-width: 430px;
+  }
+
+  .pro-hero-img {
+    width: 100%;
+    max-height: 48vh;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: 18px;
+  }
+
+  .pro-home-panel {
+    padding: 8px;
+    margin-top: 8px;
+  }
+
+  .pro-feature-card {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 18px;
+  }
+
+  .pro-feature-card span {
+    font-size: 24px;
+    margin-bottom: 2px;
+  }
+
+  .pro-feature-card strong {
+    font-size: 22px;
+    margin-bottom: 2px;
+  }
+
+  .pro-feature-card small {
+    font-size: 17px;
+  }
+
+  .pro-start-button {
+    min-height: 72px;
+    font-size: 24px;
+    padding: 14px 18px;
+    margin-top: 8px;
+  }
+
+  .pro-start-button small {
+    display: block;
+    font-size: 16px;
+    margin-top: 4px;
+  }
+}
+/* 🔥 FIX: plats för mobilens bottenmeny */
+.app-shell {
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+.pro-start-button {
+  margin-bottom: 20px;
+}
+/* Kompakt mobil-startsida: allt ska få plats bättre */
+@media (max-width: 500px) {
+  .pro-hero-img {
+    max-height: 42vh;
+  }
+
+  .pro-feature-card {
+    padding: 9px 12px;
+    margin-bottom: 7px;
+  }
+
+  .pro-feature-card span {
+    font-size: 22px;
+  }
+
+  .pro-feature-card strong {
+    font-size: 20px;
+  }
+
+  .pro-feature-card small {
+    font-size: 15px;
+  }
+
+  .pro-start-button {
+    min-height: 62px;
+    font-size: 22px;
+    padding: 10px 14px;
+    margin-top: 6px;
+    margin-bottom: 28px;
+  }
+
+  .pro-start-button small {
+    font-size: 14px;
+  }
+}
+/* ===== SISTA 5%: mobilbalans + lite spelkänsla ===== */
+
+@media (max-width: 500px) {
+  .app-shell {
+    padding: 8px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    align-items: flex-start;
+  }
+
+  .pro-home {
+    width: 100%;
+    max-width: 430px;
+  }
+
+  .pro-hero-img {
+    width: 100%;
+    max-height: 38vh;
+    object-fit: contain;
+    object-position: center top;
+    border-radius: 18px;
+  }
+
+  .pro-home-panel {
+    padding: 7px;
+    margin-top: 6px;
+  }
+
+  .pro-feature-card {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 16px;
+  }
+
+  .pro-feature-card span {
+    font-size: 21px;
+    margin-bottom: 1px;
+  }
+
+  .pro-feature-card strong {
+    font-size: 19px;
+    margin-bottom: 1px;
+  }
+
+  .pro-feature-card small {
+    font-size: 14px;
+  }
+
+  .pro-start-button {
+    min-height: 58px;
+    font-size: 20px;
+    padding: 10px 14px;
+    margin-top: 6px;
+    margin-bottom: 34px;
+    animation: softPulse 1.8s ease-in-out infinite;
+  }
+
+  .pro-start-button small {
+    display: block;
+    font-size: 13px;
+    margin-top: 2px;
+  }
+}
+
+/* Liten wow-effekt på startknappen */
+@keyframes softPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.pro-hero-img {
+  width: 100%;
+  max-height: 40vh;
+  object-fit: cover;          /* 🔥 fyller snyggt igen */
+  object-position: center 70%; /* 🔥 visar bilen + nummerplåt */
+  border-radius: 20px;
+}
+.pro-hero-card {
+  position: relative;
+}
+
+.pro-hero-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, #111a4d);
+}
+/* Fix så toppen inte kapas */
+@media (max-width: 500px) {
+  .pro-hero-img {
+    object-position: center 75%; /* 🔥 flyttar ner bilden lite */
+  }
+}
+/* Fix: visa hela toppen av hero-bilden */
+@media (max-width: 500px) {
+  .pro-hero-img {
+    max-height: 38vh;
+    object-fit: cover;
+    object-position: center top;
+  }
+}
+/* ===== HERO FIX (visa mer av bilden) ===== */
+.pro-hero-img {
+  width: 100%;
+  max-height: 260px;   /* 🔥 mindre höjd = mer plats */
+  object-fit: cover;
+  object-position: center 70%; /* 🔥 flytta ner fokus (visar bilen bättre) */
+  border-radius: 20px;
+}
+
+/* 🔥 Mjukare övertoning (inte så mörk) */
+.pro-hero-card {
+  position: relative;
+}
+
+.pro-hero-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, #111a4d);
+  border-radius: 20px;
+}
+
+/* ===== KORTEN – lite mindre & tightare ===== */
+.pro-feature-card {
+  padding: 14px;
   margin-bottom: 10px;
+  border-radius: 16px;
 }
 
-.tagline {
-  font-size: 18px;
-  font-weight: 800;
-  text-align: center;
-  margin-bottom: 14px;
+/* ikon */
+.pro-feature-card span {
+  font-size: 24px;
 }
 
-.instruction {
-  font-size: 18px;
-  font-weight: 800;
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.panel {
-  backdrop-filter: blur(8px);
-}
-
-.primary-button {
-  box-shadow: 0 8px 0 rgba(0,0,0,0.25);
-  transition: transform 0.1s;
-}
-
-.primary-button:active {
-  transform: translateY(2px);
-}
-
-.count-button {
-  box-shadow: 0 10px 0 rgba(0,0,0,0.25);
-}
-
-.player-box input {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.locked-box {
-  text-align: center;
-}
-
-.timer-box {
+/* rubrik */
+.pro-feature-card strong {
   font-size: 20px;
-}.start-btn {
-  min-height: 78px;
-  font-size: 22px;
-  border-radius: 22px;
-  box-shadow: 0 12px 0 rgba(0,0,0,0.25);
-  transition: all 0.1s ease;
 }
 
-.start-btn:active {
-  transform: translateY(3px);
-  box-shadow: 0 6px 0 rgba(0,0,0,0.25);
-}.hero-img {
+/* underrad */
+.pro-feature-card small {
+  font-size: 15px;
+}
+
+/* ===== STARTKNAPP – mer premium ===== */
+.pro-start-button {
+  min-height: 64px;
+  font-size: 20px;
+  border-radius: 20px;
+  margin-top: 10px;
+}
+
+/* liten text i knappen */
+.pro-start-button small {
+  font-size: 13px;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ===== HELA LAYOUTEN – bättre balans ===== */
+.pro-home-panel {
+  margin-top: -10px; /* 🔥 drar upp korten lite snyggt */
+  padding: 10px;
+}
+
+/* ===== MOBIL – få allt att rymmas perfekt ===== */
+@media (max-width: 500px) {
+  .pro-hero-img {
+    max-height: 240px;
+  }
+
+  .pro-feature-card {
+    padding: 12px;
+  }
+
+  .pro-start-button {
+    min-height: 60px;
+    font-size: 18px;
+  }
+}
+/* Visa hela hero-bilden på mobilen */
+@media (max-width: 500px) {
+  .pro-hero-img {
+    width: 100%;
+    max-height: none;
+    height: auto;
+    object-fit: contain;
+    object-position: center top;
+    border-radius: 18px;
+  }
+
+  .pro-hero-card::after {
+    display: none;
+  }
+
+  .pro-feature-card {
+    padding: 9px 10px;
+    margin-bottom: 7px;
+  }
+
+  .pro-feature-card strong {
+    font-size: 20px;
+  }
+
+  .pro-feature-card small {
+    font-size: 14px;
+  }
+
+  .pro-start-button {
+    min-height: 58px;
+    font-size: 19px;
+    padding: 10px 14px;
+  }
+}
+/* ===== KONFETTI ===== */
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.confetti span {
+  position: absolute;
+  top: -30px;
+  left: calc(var(--i) * 1.5%);
+  width: 10px;
+  height: 16px;
+  border-radius: 3px;
+  background: hsl(calc(var(--i) * 38), 90%, 60%);
+  animation: confettiFall 2.6s ease-in forwards;
+  animation-delay: calc(var(--i) * 0.025s);
+}
+
+.confetti span:nth-child(3n) {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.confetti span:nth-child(4n) {
+  width: 15px;
+  height: 10px;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-40px) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(760deg);
+    opacity: 0;
+  }
+}
+/* ===== STOR VINNARHYLLNING ===== */
+
+.winner-celebration {
+  background: linear-gradient(180deg, #fff7c2, #ffcf33);
+  color: #241500;
   border-radius: 26px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-}.panel {
-  padding: 24px;
-}.mode-row {
+  padding: 24px 16px;
+  margin: 18px 0;
+  text-align: center;
+  box-shadow: 0 10px 0 #b87900, 0 18px 30px rgba(0,0,0,0.35);
+  animation: winnerPop 0.7s ease-out;
+}
+
+.winner-crown {
+  font-size: 54px;
+  animation: crownBounce 1s ease-in-out infinite;
+}
+
+.winner-label {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+
+.winner-name {
+  font-size: 42px;
+  font-weight: 900;
+  margin-top: 8px;
+  color: #111a4d;
+  text-shadow: 2px 2px 0 #ffffff;
+}
+
+.winner-stars {
+  font-size: 28px;
+  margin-top: 10px;
+}
+
+/* Mer intensiv konfetti */
+.confetti span {
+  animation-duration: 3.2s;
+}
+
+@keyframes winnerPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes crownBounce {
+  0%, 100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(4deg);
+  }
+}
+.mega-winner {
+  font-size: 42px;
+  text-align: center;
+  font-weight: 900;
+  color: #ffe347;
+
+  animation: pulseWinner 1s infinite alternate;
+}
+
+@keyframes pulseWinner {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.08);
+  }
+}
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.7);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+}
+
+.countdown-number {
+  font-size: 120px;
+  font-weight: 900;
+  color: white;
+
+  animation: popCountdown 0.8s ease;
+}
+
+@keyframes popCountdown {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* ===== REGLER ===== */
+
+.rules-overlay {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.72);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 18px;
+
+  z-index: 99999;
+}
+
+.rules-card {
+  width: 100%;
+  max-width: 420px;
+
+  background: linear-gradient(180deg, #ffffff, #eef3ff);
+
+  border-radius: 28px;
+
+  padding: 24px 20px;
+
+  text-align: center;
+
+  box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+}
+
+.rules-card h2 {
+  font-size: 34px;
+  color: #111a4d;
+  margin-bottom: 18px;
+}
+
+.rules-list {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 10px;
+
+  margin-bottom: 20px;
 }
 
-.mode-row button.active {
-  background: linear-gradient(90deg, #ff2f91, #ff9f2e);
+.rules-list p {
+  background: rgba(17, 26, 77, 0.08);
+
+  padding: 14px;
+
+  border-radius: 16px;
+
+  font-size: 18px !important;
+  font-weight: 800 !important;
+
+  color: #111a4d;
 }
 
-.gps-status {
-  font-size: 14px;
-  opacity: 0.85;
+.rules-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  margin-bottom: 18px;
+
+  font-size: 16px !important;
+  color: #111a4d;
+}
+
+.rules-checkbox input {
+  width: 22px;
+  height: 22px;
+}
+/* ===== RESPONSIV MOBIL-FIX ===== */
+
+@media (max-width: 500px) {
+  .app-shell {
+    min-height: 100svh;
+    padding: clamp(6px, 2vw, 12px);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    align-items: flex-start;
+  }
+
+  .screen-card,
+  .pro-home {
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    padding: clamp(12px, 4vw, 18px);
+    border-radius: 22px;
+  }
+
+  .pro-hero-img {
+    max-height: clamp(190px, 36svh, 330px);
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .pro-feature-card {
+    padding: clamp(7px, 2.4vw, 12px);
+    margin-bottom: clamp(5px, 1.8vw, 8px);
+  }
+
+  .pro-feature-card span {
+    font-size: clamp(18px, 6vw, 24px);
+  }
+
+  .pro-feature-card strong {
+    font-size: clamp(17px, 5.2vw, 21px);
+  }
+
+  .pro-feature-card small {
+    font-size: clamp(12px, 3.8vw, 15px);
+  }
+
+  h1 {
+    font-size: clamp(28px, 8vw, 40px) !important;
+  }
+
+  h2 {
+    font-size: clamp(20px, 6vw, 26px);
+  }
+
+  p,
+  label {
+    font-size: clamp(14px, 4.2vw, 18px) !important;
+  }
+
+  input,
+  select {
+    font-size: clamp(15px, 4.2vw, 18px);
+    padding: clamp(10px, 3vw, 14px);
+  }
+
+  button {
+    font-size: clamp(17px, 5vw, 22px);
+    padding: clamp(10px, 3vw, 15px);
+  }
+
+  .pro-start-button {
+    min-height: clamp(52px, 9svh, 68px);
+  }
+
+  .count-number {
+    font-size: clamp(64px, 20vw, 96px);
+    margin: clamp(6px, 2svh, 14px) 0;
+  }
+
+  .count-button {
+    min-height: clamp(74px, 14svh, 110px);
+    font-size: clamp(40px, 12vw, 56px);
+  }
+
+  .mega-winner {
+    font-size: clamp(30px, 10vw, 56px);
+  }
+
+  .rules-card {
+    max-height: 92svh;
+    overflow-y: auto;
+  }
 }

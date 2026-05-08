@@ -411,3 +411,226 @@ code {
     display: none;
   }
 }
+/* Mobil: kompakt spelsida */
+@media (max-width: 500px) {
+  .game-screen {
+    padding: 14px;
+  }
+
+  .game-screen h1 {
+    font-size: 42px !important;
+    margin-bottom: 8px;
+  }
+
+  .game-screen p {
+    font-size: 22px !important;
+    margin-bottom: 10px;
+  }
+
+  .timer-box {
+    font-size: 24px;
+    padding: 8px 14px;
+    margin: 6px 0 10px;
+  }
+
+  .gps-status {
+    font-size: 20px !important;
+    margin-bottom: 8px;
+  }
+
+  .progress-track {
+    margin: 8px 0 12px;
+  }
+
+  .count-number {
+    font-size: 78px;
+    margin: 10px 0 16px;
+  }
+
+  .count-button {
+    min-height: 92px;
+    font-size: 48px;
+    border-radius: 24px;
+  }
+
+  .game-screen button {
+    padding: 13px 16px;
+    font-size: 28px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .game-screen .primary-button {
+    min-height: 64px;
+    font-size: 28px;
+  }
+
+  .game-screen .ghost-button {
+    margin-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+}
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* ===== MOBIL-FINISH: jämnare storlek på allt ===== */
+@media (max-width: 500px) {
+  .app-shell {
+    padding: 10px;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    align-items: flex-start;
+  }
+
+  .screen-card,
+  .pro-home {
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .pro-hero-img {
+    width: 100%;
+    height: auto;
+    max-height: 38vh;
+    object-fit: contain;
+    object-position: center top;
+    border-radius: 18px;
+  }
+
+  .pro-home-panel {
+    padding: 8px;
+    margin-top: 6px;
+  }
+
+  .pro-feature-card {
+    padding: 9px 10px;
+    margin-bottom: 7px;
+    border-radius: 16px;
+  }
+
+  .pro-feature-card span {
+    font-size: 22px;
+    margin-bottom: 2px;
+  }
+
+  .pro-feature-card strong {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .pro-feature-card small {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-size: 34px !important;
+    line-height: 1.1;
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    font-size: 24px;
+    margin: 14px 0 8px;
+  }
+
+  p,
+  label {
+    font-size: 17px !important;
+  }
+
+  input,
+  select {
+    font-size: 17px;
+    padding: 13px;
+    border-radius: 14px;
+  }
+
+  button {
+    font-size: 20px;
+    padding: 13px 16px;
+    border-radius: 18px;
+  }
+
+  .pro-start-button {
+    min-height: 58px;
+    font-size: 20px;
+    padding: 10px 14px;
+    margin-bottom: 28px;
+  }
+
+  .pro-start-button small {
+    font-size: 13px;
+  }
+
+  .count-number {
+    font-size: 82px;
+    margin: 10px 0 14px;
+  }
+
+  .count-button {
+    min-height: 92px;
+    font-size: 48px;
+    border-radius: 24px;
+  }
+
+  .timer-box {
+    font-size: 22px;
+    padding: 8px 14px;
+  }
+
+  .mega-winner {
+    font-size: 34px;
+    padding: 20px 12px;
+  }
+
+  .result-row {
+    padding: 11px;
+    font-size: 16px;
+  }
+
+  .countdown-number {
+    font-size: 100px;
+  }
+}
+/* Resultat-rubrik vit */
+.panel h1 {
+  color: white;
+}
+
+/* Vinnarruta snyggare */
+.mega-winner {
+  font-size: 56px;
+  line-height: 0.9;
+  text-align: center;
+  color: #ffe14a;
+
+  text-shadow:
+    0 4px 12px rgba(0,0,0,0.45),
+    0 0 18px rgba(255,225,74,0.35);
+
+  padding: 26px 14px;
+}
+
+/* Vinnarnamn mindre än VINNARE */
+.mega-winner br + * {
+  font-size: 40px;
+}
+
+/* Resultatkort */
+.result-row {
+  border-radius: 22px;
+  padding: 18px 16px;
+}
+
+/* Konfetti bakom innehåll */
+canvas {
+  pointer-events: none;
+}
+.panel input {
+  text-transform: uppercase;
+}
