@@ -73,7 +73,29 @@ const isLocked =
     { name: "", guess: "", locked: false },
     { name: "", guess: "", locked: false },
   ]);
+useEffect(() => {
+  const savedGame = localStorage.getItem("bilsemester-save");
 
+  if (savedGame) {
+    const data = JSON.parse(savedGame);
+
+    setCount(data.count || 0);
+    setDistance(data.distance || 0);
+    setScreen(data.screen || "start");
+    setIsPaused(data.isPaused || false);
+  }
+}, []);
+useEffect(() => {
+  localStorage.setItem(
+    "bilsemester-save",
+    JSON.stringify({
+      count,
+      distance,
+      screen,
+      isPaused,
+    })
+  );
+}, [count, distance, screen, isPaused]);
   const watchIdRef = useRef(null);
   const lastPositionRef = useRef(null);
   const finishingRef = useRef(false);
@@ -689,7 +711,7 @@ if (isLocked) {
               className={playMode === "gps" ? "active" : ""}
               onClick={() => setPlayMode("gps")}
             >
-              📍 GPS
+              📍 Avstånd
             </button>
           </div>
 
