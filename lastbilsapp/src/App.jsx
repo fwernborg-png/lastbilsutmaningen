@@ -51,7 +51,7 @@ const [hasAccess, setHasAccess] = useState(
 const [gamesPlayed, setGamesPlayed] = useState(
   Number(localStorage.getItem("bilsemester-games") || 0)
 );
-
+const [floatingPoints, setFloatingPoints] = useState([]);
 const isLocked =
   gamesPlayed >= 5 &&
   localStorage.getItem("bilsemester-premium") !== "yes";
@@ -878,15 +878,41 @@ if (isLocked) {
             />
           </div>
 
-          <div className="count-number">{count}</div>
-
+          <div className={`count-number ${count > 0 ? "count-bounce" : ""}`}>
+  {count}
+</div>
+<div className="floating-points-container">
+  {floatingPoints.map((item) => (
+    <div key={item.id} className="floating-point">
+      +1 🚗
+    </div>
+  ))}
+</div>
           <button
             className="count-button"
             disabled={playMode === "gps" && !gpsStarted}
-            onClick={() => {
-              playClickEffect();
-              setCount((value) => value + 1);
-            }}
+            onClick={(event) => {
+  event.currentTarget.classList.remove("pop");
+
+  void event.currentTarget.offsetWidth;
+
+  event.currentTarget.classList.add("pop");
+
+  playClickEffect();
+  setCount((value) => value + 1);
+  const id = Date.now();
+
+setFloatingPoints((current) => [
+  ...current,
+  { id }
+]);
+
+setTimeout(() => {
+  setFloatingPoints((current) =>
+    current.filter((item) => item.id !== id)
+  );
+}, 900);
+}}
           >
             +1
           </button>
@@ -899,12 +925,15 @@ if (isLocked) {
           </button>
 
           <button className="secondary-button" onClick={togglePause}>
-            {isPaused ? "Fortsätt" : "Pausa"}
+            {isPaused ? "▶ Fortsätt" : "⏸ Pausa"}
           </button>
 
-          <button className="primary-button" onClick={finishRound}>
+          <button className="secondary-button result-button" onClick={finishRound}>
             🏁 Visa resultat
           </button>
+          <div className="road-status">
+  🚗 Familjen är ute på äventyr!
+</div>
         </main>
       )}
 
@@ -920,7 +949,15 @@ if (isLocked) {
             </p>
 
             <div className="winner-box mega-winner">
-              {results.filter((player) => player.diff === results[0]?.diff).length > 1 ? "👑 DELAD VINST 👑" : "👑 VINNARE 👑"}
+              <div className="winner-title">
+  <span>👑</span>
+
+  {results.filter((player) => player.diff === results[0]?.diff).length > 1
+    ? "DELAD VINST"
+    : "VINNARE"}
+
+  <span>👑</span>
+</div>
               <br />
               {results.filter((player) => player.diff === results[0]?.diff).map((player) => player.name).join(" & ")}
             </div>

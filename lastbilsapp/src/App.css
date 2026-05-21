@@ -208,11 +208,25 @@ button:active {
 .winner-box {
   background: linear-gradient(90deg, #ff2f91, #ff9f2e);
   border-radius: 18px;
-  padding: 14px;
+  padding: 20px;
   margin: 14px 0;
+  min-height: 120px;
   font-weight: 900;
+  font-size: 1.4rem;
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.45);
 }
+.winner-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
 
+  font-size: 42px;
+  font-weight: 900;
+  color: #ffe84a;
+
+  text-shadow: 0 3px 10px rgba(0,0,0,0.35);
+}
 .result-row {
   display: grid;
   gap: 4px;
@@ -738,11 +752,17 @@ button:active {
   margin-top: 8px;
   color: #111a4d;
   text-shadow: 2px 2px 0 #ffffff;
+  display: flex;
+justify-content: center;
+align-items: center;
+gap: 10px;
+  letter-spacing: 1px;
 }
 
 .winner-stars {
-  font-size: 28px;
+  font-size: 44px;
   margin-top: 10px;
+  animation: winnerPulse 2s infinite;
 }
 
 /* Mer intensiv konfetti */
@@ -988,5 +1008,113 @@ button:active {
   .rules-card {
     max-height: 92svh;
     overflow-y: auto;
+  }
+}
+.result-button {
+  opacity: 0.9;
+  transform: scale(0.92);
+}
+.pop {
+  animation: popButton 0.22s ease;
+}
+
+@keyframes popButton {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+.count-bounce {
+  animation: countBounce 0.25s ease;
+}
+
+@keyframes countBounce {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+.road-status {
+  margin-top: 18px;
+  font-size: 1rem;
+  opacity: 0.9;
+  text-align: center;
+  animation: floatStatus 3s ease-in-out infinite;
+}
+
+@keyframes floatStatus {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+.floating-points-container {
+  position: relative;
+  height: 80px;
+}
+
+.floating-point {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffe066;
+  font-size: 2rem;
+  font-weight: 900;
+  pointer-events: none;
+  animation: floatPoint 0.9s ease-out forwards;
+  text-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+
+@keyframes floatPoint {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0px) scale(0.8);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -90px) scale(1.2);
+  }
+}
+.count-button:active {
+  transform: scale(0.96);
+  filter: brightness(1.08);
+}
+@keyframes winnerPulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }
