@@ -1,1061 +1,988 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import './App.css'
+import Confetti from "react-confetti";
+import { useEffect, useMemo, useRef, useState } from "react";
+import "./App.css";
 
-const GAME_STORAGE_KEY = 'i_baksatet_arcade_game_v1'
-const SETTINGS_STORAGE_KEY = 'i_baksatet_arcade_settings_v1'
+const categories = {
+  roda_bilar: { label: "röda bilar", icon: "🚗" },
+  lastbilar: { label: "lastbilar", icon: "🚚" },
+  djur: { label: "djur", icon: "�" },
+  gula_bilar: { label: "gula bilar", icon: "🚕" },
+  taxibilar: { label: "taxibilar", icon: "🚖" },
+  motorcyklar: { label: "motorcyklar", icon: "🏍️" },
+  takboxar: { label: "takboxar", icon: "🎒" },
+  kor: { label: "kor", icon: "🐄" },
+  radjur: { label: "rådjur", icon: "🦌" },
+  hastar: { label: "hästar", icon: "🐎" },
+  vindkraftverk: { label: "vindkraftverk", icon: "🌬️" },
+};
 
-function App() {
-  const [screen, setScreen] = useState('start')
-  const [showResumePrompt, setShowResumePrompt] = useState(false)
-  const [savedGame, setSavedGame] = useState(null)
-  const [showConfetti, setShowConfetti] = useState(false)
-  const [scorePulse, setScorePulse] = useState(false)
+const timeOptions = [
+  { label: "1 minut", seconds: 60 },
+  { label: "3 minuter", seconds: 180 },
+  { label: "5 minuter", seconds: 300 },
+  { label: "10 minuter", seconds: 600 },
+  { label: "Egen tid", seconds: -1 },
+];
 
-  const [objectType, setObjectType] = useState('lastbilar')
-  const [customObject, setCustomObject] = useState('')
+const distanceOptions = [
+  { label: "1 km", km: 1 },
+  { label: "2 km", km: 2 },
+  { label: "5 km", km: 5 },
+  { label: "10 km", km: 10 },
+  { label: "Eget avstånd", km: -1 },
+];
 
-  const [playMode, setPlayMode] = useState('time') // time | gps
+export default function App() {
+  const [screen, setScreen] = useState("start");
+  const [showRules, setShowRules] = useState(
+  localStorage.getItem("bilsemester-hide-rules") !== "yes"
+);
 
-  const [timeMode, setTimeMode] = useState('preset')
-  const [targetMinutes, setTargetMinutes] = useState(3)
-  const [customMinutes, setCustomMinutes] = useState('')
+const [dontShowRulesAgain, setDontShowRulesAgain] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+const [hasAccess, setHasAccess] = useState(
+  localStorage.getItem("bilsemester-access") === "yes"
+);
+  const [countdown, setCountdown] = useState(null);
 
-  const [distanceMode, setDistanceMode] = useState('preset')
-  const [targetDistance, setTargetDistance] = useState(5)
-  const [customDistance, setCustomDistance] = useState('')
+  const [category, setCategory] = useState("roda_bilar");
+  const [customCategory, setCustomCategory] = useState("");
+  const [count, setCount] = useState(0);
+const [gamesPlayed, setGamesPlayed] = useState(
+  Number(localStorage.getItem("bilsemester-games") || 0)
+);
+const [floatingPoints, setFloatingPoints] = useState([]);
+const isLocked =
+  gamesPlayed >= 5 &&
+  localStorage.getItem("bilsemester-premium") !== "yes";
+  const [playMode, setPlayMode] = useState("time");
 
+  const [timeChoice, setTimeChoice] = useState(180);
+  const [customMinutes, setCustomMinutes] = useState(4);
+  const [timeLeft, setTimeLeft] = useState(180);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const [distanceChoice, setDistanceChoice] = useState(2);
+  const [customKm, setCustomKm] = useState(3);
+  const [distance, setDistance] = useState(0);
+  const [gpsStatus, setGpsStatus] = useState("Avstånd ej startad");
+  const [gpsCountdown, setGpsCountdown] = useState(null);
+  const [gpsStarted, setGpsStarted] = useState(false);
+
+  const nextPlayerIdRef = useRef(3);
   const [players, setPlayers] = useState([
-    { name: '', guess: '', locked: false },
-    { name: '', guess: '', locked: false },
-  ])
+    { id: 1, name: "", guess: "", locked: false },
+    { id: 2, name: "", guess: "", locked: false },
+  ]);
+useEffect(() => {
+  const savedGame = localStorage.getItem("bilsemester-save");
 
-  const [count, setCount] = useState(0)
-  const [distance, setDistance] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [gpsStatus, setGpsStatus] = useState('GPS ej startad')
-  const [isPaused, setIsPaused] = useState(false)
+  if (savedGame) {
+    const data = JSON.parse(savedGame);
 
-  const watchIdRef = useRef(null)
-  const lastPositionRef = useRef(null)
-  const timerRef = useRef(null)
-  const wakeLockRef = useRef(null)
-  const audioContextRef = useRef(null)
-  const hasLoadedStateRef = useRef(false)
+    setCount(data.count || 0);
+    setDistance(data.distance || 0);
+    setScreen(data.screen || "start");
+    setIsPaused(data.isPaused || false);
+  }
+}, []);
+useEffect(() => {
+  localStorage.setItem(
+    "bilsemester-save",
+    JSON.stringify({
+      count,
+      distance,
+      screen,
+      isPaused,
+    })
+  );
+}, [count, distance, screen, isPaused]);
+  const watchIdRef = useRef(null);
+  const lastPositionRef = useRef(null);
+  const finishingRef = useRef(false);
+  const wakeLockRef = useRef(null);
 
-  const selectedObject = useMemo(() => {
-    if (objectType === 'eget') return customObject.trim() || 'objekt'
-    return objectType
-  }, [objectType, customObject])
+  const objectName =
+    category === "custom"
+      ? customCategory.trim() || "egna saker"
+      : categories[category].label;
 
-  const activeTargetMinutes = useMemo(() => {
-    if (timeMode === 'custom') {
-      const parsed = Number(customMinutes)
-      return parsed > 0 ? parsed : 0
+  const objectIcon = category === "custom" ? "✏️" : categories[category].icon;
+
+  const totalSeconds = useMemo(() => {
+    if (timeChoice === -1) {
+      return Math.max(1, Number(customMinutes || 1)) * 60;
     }
-    return targetMinutes
-  }, [timeMode, customMinutes, targetMinutes])
+    return Number(timeChoice);
+  }, [timeChoice, customMinutes]);
 
-  const activeTargetDistance = useMemo(() => {
-    if (distanceMode === 'custom') {
-      const parsed = Number(customDistance)
-      return parsed > 0 ? parsed : 0
+  const targetKm = useMemo(() => {
+    if (distanceChoice === -1) {
+      return Math.max(0.1, Number(customKm || 0.1));
     }
-    return targetDistance
-  }, [distanceMode, customDistance, targetDistance])
+    return Number(distanceChoice);
+  }, [distanceChoice, customKm]);
 
-  const activeTargetSeconds = activeTargetMinutes * 60
+  const progressPercent = useMemo(() => {
+    if (screen !== "game") return 0;
 
-  const progress = useMemo(() => {
-    if (playMode === 'gps') {
-      return activeTargetDistance > 0
-        ? Math.min((distance / activeTargetDistance) * 100, 100)
-        : 0
+    if (playMode === "time") {
+      return Math.min(((totalSeconds - timeLeft) / totalSeconds) * 100, 100);
     }
 
-    return activeTargetSeconds > 0
-      ? Math.min(((activeTargetSeconds - timeLeft) / activeTargetSeconds) * 100, 100)
-      : 0
-  }, [playMode, activeTargetDistance, distance, activeTargetSeconds, timeLeft])
+    return Math.min((distance / targetKm) * 100, 100);
+  }, [screen, playMode, totalSeconds, timeLeft, distance, targetKm]);
 
-  const latestSettingsExists = !!localStorage.getItem(SETTINGS_STORAGE_KEY)
-
-  const allPlayersReady =
-    players.length > 0 &&
-    players.every(
-      (player) => player.name.trim() !== '' && player.guess !== '' && player.locked
-    )
-
-  const sortedResults = [...players]
-    .map((player) => ({
-      ...player,
-      diff: Math.abs(Number(player.guess) - count),
-    }))
-    .sort((a, b) => a.diff - b.diff)
-
-  const winners = sortedResults.length
-    ? sortedResults.filter((player) => player.diff === sortedResults[0].diff)
-    : []
+  const results = useMemo(() => {
+    return [...players]
+      .map((player, index) => ({
+        ...player,
+        name: player.name || `Spelare ${index + 1}`,
+        diff: Math.abs(Number(player.guess || 0) - count),
+      }))
+      .sort((a, b) => a.diff - b.diff);
+  }, [players, count]);
 
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${String(secs).padStart(2, '0')}`
-  }
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}:${String(rest).padStart(2, "0")}`;
+  };
 
-  const getMedal = (index) => {
-    if (index === 0) return '🥇'
-    if (index === 1) return '🥈'
-    if (index === 2) return '🥉'
-    return '⭐'
-  }
-
-  const getRoadIcon = () => {
-    if (selectedObject.toLowerCase().includes('lastbil')) return '🚚'
-    if (selectedObject.toLowerCase().includes('bil')) return '🚗'
-    if (selectedObject.toLowerCase().includes('skylt')) return '🛣️'
-    if (selectedObject.toLowerCase().includes('husbil')) return '🚐'
-    return '⭐'
-  }
-
-  const toRadians = (value) => (value * Math.PI) / 180
-
-  const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
-    const earthRadius = 6371
-    const dLat = toRadians(lat2 - lat1)
-    const dLon = toRadians(lon2 - lon1)
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) *
-        Math.cos(toRadians(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2)
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return earthRadius * c
-  }
-
-  const playClickSound = () => {
+  const playClickEffect = () => {
     try {
-      if (!audioContextRef.current) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext
-        if (!AudioCtx) return
-        audioContextRef.current = new AudioCtx()
-      }
+      if (navigator.vibrate) navigator.vibrate(40);
 
-      const ctx = audioContextRef.current
-      const oscillator = ctx.createOscillator()
-      const gain = ctx.createGain()
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
 
-      oscillator.type = 'square'
-      oscillator.frequency.value = 780
-      gain.gain.value = 0.02
+      if (!AudioContextClass) return;
 
-      oscillator.connect(gain)
-      gain.connect(ctx.destination)
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
 
-      oscillator.start()
-      oscillator.stop(ctx.currentTime + 0.04)
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+
+      gain.gain.setValueAtTime(0.12, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + 0.12
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.12);
     } catch {
-      // ignore
+      // Ljud stöds inte alltid i alla webbläsare
     }
-  }
+  };
 
-  const playWinSound = () => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-
-      const ctx = new AudioCtx()
-      const notes = [523.25, 659.25, 783.99, 1046.5]
-
-      notes.forEach((freq, index) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-
-        osc.type = 'triangle'
-        osc.frequency.value = freq
-        gain.gain.value = 0.03
-
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-
-        const start = ctx.currentTime + index * 0.09
-        const end = start + 0.16
-
-        osc.start(start)
-        osc.stop(end)
-      })
-    } catch {
-      // ignore
+const playWinEffect = () => {
+  try {
+    if (navigator.vibrate) {
+      navigator.vibrate([120, 80, 180]);
     }
-  }
 
-  const buzz = (duration = 30) => {
-    if (navigator.vibrate) navigator.vibrate(duration)
-  }
+    const audio = new Audio(`${import.meta.env.BASE_URL}win.mp3`);
+    audio.volume = 0.9;
+    audio.play();
 
-  const pulseScore = () => {
-    setScorePulse(true)
-    window.setTimeout(() => setScorePulse(false), 180)
+  } catch {
+    // Vinstljud stöds inte i alla webbläsare
   }
+};
 
-  const acquireWakeLock = async () => {
+  const enableWakeLock = async () => {
     try {
-      if ('wakeLock' in navigator && !wakeLockRef.current) {
-        wakeLockRef.current = await navigator.wakeLock.request('screen')
+      if ("wakeLock" in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
       }
     } catch {
-      // ignore
+      // Wake lock stöds inte alltid
     }
-  }
+  };
 
-  const releaseWakeLock = async () => {
+  const disableWakeLock = async () => {
     try {
       if (wakeLockRef.current) {
-        await wakeLockRef.current.release()
-        wakeLockRef.current = null
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
       }
     } catch {
-      // ignore
+      // Ignorera
     }
-  }
+  };
 
-  const stopGpsTracking = () => {
+  const toRadians = (value) => (value * Math.PI) / 180;
+
+  const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+    const earthRadius = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+    return earthRadius * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+
+  const stopGps = () => {
     if (watchIdRef.current !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-    }
-    lastPositionRef.current = null
-  }
-
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-  }
-
-  const stopAllTracking = () => {
-    stopGpsTracking()
-    stopTimer()
-  }
-
-  const saveLatestSettings = () => {
-    const settings = {
-      objectType,
-      customObject,
-      playMode,
-      timeMode,
-      targetMinutes,
-      customMinutes,
-      distanceMode,
-      targetDistance,
-      customDistance,
-      players: players.map((player, index) => ({
-        name: player.name || `Spelare ${index + 1}`,
-      })),
+      navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
-  }
+    watchIdRef.current = null;
+    lastPositionRef.current = null;
+    setGpsStarted(false);
+  };
 
-  const applyLatestSettings = () => {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
+  const finishRound = () => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
 
-    if (!raw) {
-      alert('Ingen snabbstart hittades ännu.')
-      return
-    }
+    stopGps();
+    disableWakeLock();
+    setIsPaused(false);
+    setGpsCountdown(null);
 
-    try {
-      const parsed = JSON.parse(raw)
+    playWinEffect();
+    setScreen("result");
+    const nextGames = gamesPlayed + 1;
 
-      if (parsed.objectType) setObjectType(parsed.objectType)
-      if (parsed.customObject !== undefined) setCustomObject(parsed.customObject)
-      if (parsed.playMode) setPlayMode(parsed.playMode)
-      if (parsed.timeMode) setTimeMode(parsed.timeMode)
-      if (parsed.targetMinutes !== undefined) setTargetMinutes(parsed.targetMinutes)
-      if (parsed.customMinutes !== undefined) setCustomMinutes(parsed.customMinutes)
-      if (parsed.distanceMode) setDistanceMode(parsed.distanceMode)
-      if (parsed.targetDistance !== undefined) setTargetDistance(parsed.targetDistance)
-      if (parsed.customDistance !== undefined) setCustomDistance(parsed.customDistance)
+setGamesPlayed(nextGames);
 
-      if (Array.isArray(parsed.players) && parsed.players.length > 0) {
-        setPlayers(
-          parsed.players.map((player, index) => ({
-            name: player.name || `Spelare ${index + 1}`,
-            guess: '',
-            locked: false,
-          }))
-        )
-      }
-
-      setScreen('setup')
-    } catch {
-      alert('Kunde inte läsa snabbstart.')
-    }
-  }
-
-  const clearSavedGame = () => {
-    localStorage.removeItem(GAME_STORAGE_KEY)
-    setSavedGame(null)
-    setShowResumePrompt(false)
-  }
-
-  const startFreshGame = async () => {
-    clearSavedGame()
-    stopAllTracking()
-    await releaseWakeLock()
-
-    setScreen('start')
-    setObjectType('lastbilar')
-    setCustomObject('')
-    setPlayMode('time')
-    setTimeMode('preset')
-    setTargetMinutes(3)
-    setCustomMinutes('')
-    setDistanceMode('preset')
-    setTargetDistance(5)
-    setCustomDistance('')
-    setPlayers([
-      { name: '', guess: '', locked: false },
-      { name: '', guess: '', locked: false },
-    ])
-    setCount(0)
-    setDistance(0)
-    setTimeLeft(0)
-    setGpsStatus('GPS ej startad')
-    setIsPaused(false)
-    setShowConfetti(false)
-    setScorePulse(false)
-  }
-
-  const applySavedGame = (parsed) => {
-    if (parsed.screen) setScreen(parsed.screen)
-    if (parsed.objectType) setObjectType(parsed.objectType)
-    if (parsed.customObject !== undefined) setCustomObject(parsed.customObject)
-    if (parsed.playMode) setPlayMode(parsed.playMode)
-    if (parsed.timeMode) setTimeMode(parsed.timeMode)
-    if (parsed.targetMinutes !== undefined) setTargetMinutes(parsed.targetMinutes)
-    if (parsed.customMinutes !== undefined) setCustomMinutes(parsed.customMinutes)
-    if (parsed.distanceMode) setDistanceMode(parsed.distanceMode)
-    if (parsed.targetDistance !== undefined) setTargetDistance(parsed.targetDistance)
-    if (parsed.customDistance !== undefined) setCustomDistance(parsed.customDistance)
-    if (Array.isArray(parsed.players)) setPlayers(parsed.players)
-    if (parsed.count !== undefined) setCount(parsed.count)
-    if (parsed.distance !== undefined) setDistance(parsed.distance)
-    if (parsed.timeLeft !== undefined) setTimeLeft(parsed.timeLeft)
-    if (parsed.gpsStatus) setGpsStatus(parsed.gpsStatus)
-    if (parsed.isPaused !== undefined) setIsPaused(parsed.isPaused)
-  }
-
-  const continueSavedGame = () => {
-    if (!savedGame) return
-    applySavedGame(savedGame)
-    setShowResumePrompt(false)
-  }
-
-  const updatePlayer = (index, field, value) => {
-    const updated = [...players]
-    updated[index][field] = value
-    setPlayers(updated)
-  }
-
-  const addPlayer = () => {
-    setPlayers([
-      ...players,
-      {
-        name: '',
-        guess: '',
-        locked: false,
-      },
-    ])
-  }
-
-  const lockGuess = (index) => {
-    const updated = [...players]
-    const player = updated[index]
-
-    if (player.name.trim() === '' || player.guess === '') {
-      alert('Fyll i namn och gissning innan du trycker Klar.')
-      return
-    }
-
-    if (!/^\d+$/.test(String(player.guess))) {
-      alert('Gissningen måste vara ett helt tal från 0 och uppåt.')
-      return
-    }
-
-    if (Number(player.guess) < 0) {
-      alert('Gissningen måste vara 0 eller högre.')
-      return
-    }
-
-    player.locked = true
-    setPlayers(updated)
-  }
-
-  const unlockAllGuesses = () => {
-    setPlayers(players.map((player) => ({ ...player, locked: false })))
-  }
-
-  const finishGame = async () => {
-    stopAllTracking()
-    await releaseWakeLock()
-    setIsPaused(false)
-    setScreen('result')
-    setShowConfetti(true)
-    playWinSound()
-    buzz(200)
+localStorage.setItem(
+  "bilsemester-games",
+  String(nextGames)
+);
 
     window.setTimeout(() => {
-      setShowConfetti(false)
-    }, 3000)
-  }
+      finishingRef.current = false;
+    }, 500);
+  };
 
-  const startGpsTracking = () => {
+  const startGps = () => {
     if (!navigator.geolocation) {
-      setGpsStatus('GPS stöds inte i denna webbläsare')
-      return
+      setGpsStatus("Avståndsmätning stöds inte på denna enhet");
+      return;
     }
 
-    setGpsStatus('Startar GPS...')
+    stopGps();
+    lastPositionRef.current = null;
+    setGpsStatus("Startar avståndsmätning...");
+    setGpsStarted(true);
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const { latitude, longitude, accuracy } = position.coords
+        const { latitude, longitude, accuracy } = position.coords;
 
-        if (accuracy > 80) {
-          setGpsStatus('Väntar på bättre GPS-signal...')
-          return
+        if (accuracy > 100) {
+          setGpsStatus("Väntar på bättre signal...");
+          return;
         }
 
         if (!lastPositionRef.current) {
-          lastPositionRef.current = { latitude, longitude }
-          setGpsStatus('GPS aktiv')
-          return
+          lastPositionRef.current = { latitude, longitude };
+          setGpsStatus("Räknar avstånd – kör!");
+          return;
         }
 
-        const kmMoved = getDistanceInKm(
+        const kmMoved = getDistanceKm(
           lastPositionRef.current.latitude,
           lastPositionRef.current.longitude,
           latitude,
           longitude
-        )
+        );
 
-        if (kmMoved < 0.01) return
+        if (kmMoved < 0.01) return;
 
-        setDistance((prev) => {
-          const updated = Number((prev + kmMoved).toFixed(2))
-          if (updated >= activeTargetDistance) {
-            setTimeout(() => {
-              finishGame()
-            }, 0)
+        setDistance((currentDistance) => {
+          const nextDistance = Number((currentDistance + kmMoved).toFixed(2));
+
+          if (nextDistance >= targetKm) {
+            window.setTimeout(() => finishRound(), 0);
           }
-          return updated
-        })
 
-        lastPositionRef.current = { latitude, longitude }
-        setGpsStatus('GPS aktiv')
+          return nextDistance;
+        });
+
+        lastPositionRef.current = { latitude, longitude };
+        setGpsStatus("Räknar avstånd – kör!");
       },
       (error) => {
-        if (error.code === 1) setGpsStatus('Platsåtkomst nekad')
-        else if (error.code === 2) setGpsStatus('Position ej tillgänglig')
-        else if (error.code === 3) setGpsStatus('GPS tog för lång tid')
-        else setGpsStatus('GPS-fel')
+        if (error.code === 1) setGpsStatus("Platsåtkomst nekad");
+        else if (error.code === 2) setGpsStatus("Position saknas");
+        else if (error.code === 3) setGpsStatus("Tog för lång tid");
+        else setGpsStatus("Mätfel – försök igen");
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 1000,
+        maximumAge: 0,
         timeout: 10000,
       }
-    )
-  }
+    );
+  };
 
-  const startCountdown = () => {
-    stopTimer()
+  const startGpsCountdown = () => {
+    stopGps();
+    setDistance(0);
+    setGpsStarted(false);
+    setGpsStatus("Gör er redo...");
+    setGpsCountdown(3);
 
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-          setTimeout(() => {
-            finishGame()
-          }, 0)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }
+    let number = 3;
 
-  const startGame = async () => {
-    if (!allPlayersReady) {
-      alert('Alla spelare måste fylla i och låsa sina gissningar först.')
-      return
-    }
+    const gpsInterval = window.setInterval(() => {
+      number -= 1;
 
-    if (playMode === 'time' && activeTargetMinutes <= 0) {
-      alert('Skriv en giltig tid större än 0 minuter.')
-      return
-    }
-
-    if (playMode === 'gps' && activeTargetDistance <= 0) {
-      alert('Skriv ett giltigt avstånd större än 0 km.')
-      return
-    }
-
-    saveLatestSettings()
-    setCount(0)
-    setDistance(0)
-    setTimeLeft(activeTargetSeconds)
-    setGpsStatus('GPS ej startad')
-    setIsPaused(false)
-    setShowConfetti(false)
-    setScorePulse(false)
-    lastPositionRef.current = null
-    setScreen('game')
-    await acquireWakeLock()
-  }
-
-  const handleCountUp = () => {
-    if (isPaused) return
-    setCount((prev) => prev + 1)
-    pulseScore()
-    buzz()
-    playClickSound()
-  }
-
-  const handleUndo = () => {
-    if (isPaused) return
-    setCount((prev) => Math.max(0, prev - 1))
-    buzz(15)
-  }
-
-  const togglePause = async () => {
-    const nextPaused = !isPaused
-    setIsPaused(nextPaused)
-
-    if (nextPaused) {
-      stopAllTracking()
-      await releaseWakeLock()
-    } else {
-      await acquireWakeLock()
-
-      if (playMode === 'time') {
-        startCountdown()
+      if (number > 0) {
+        setGpsCountdown(number);
       } else {
-        startGpsTracking()
+        window.clearInterval(gpsInterval);
+        setGpsCountdown(null);
+        startGps();
       }
-    }
-  }
+    }, 1000);
+  };
 
-  const resetRound = async () => {
-    stopAllTracking()
-    await releaseWakeLock()
-    setCount(0)
-    setDistance(0)
-    setTimeLeft(0)
-    setGpsStatus('GPS ej startad')
-    setIsPaused(false)
-    setShowConfetti(false)
-    setScorePulse(false)
-    setScreen('setup')
-  }
+  const startCountdownThenGame = () => {
+    setCountdown(3);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(GAME_STORAGE_KEY)
+    let number = 3;
 
-    if (!saved) {
-      hasLoadedStateRef.current = true
-      return
-    }
+    const startInterval = window.setInterval(() => {
+      number -= 1;
 
-    try {
-      const parsed = JSON.parse(saved)
+      if (number > 0) {
+        setCountdown(number);
+      } else {
+        window.clearInterval(startInterval);
+        setCountdown("KÖR!");
 
-      const hasProgress =
-        parsed &&
-        (
-          parsed.screen === 'setup' ||
-          parsed.screen === 'game' ||
-          parsed.screen === 'result' ||
-          parsed.count > 0 ||
-          parsed.distance > 0 ||
-          parsed.timeLeft > 0
-        )
+        window.setTimeout(() => {
+          setCountdown(null);
+          setScreen("game");
+          enableWakeLock();
 
-      if (hasProgress) {
-        setSavedGame(parsed)
-        setShowResumePrompt(true)
+          if (playMode === "gps") {
+            startGpsCountdown();
+          }
+        }, 800);
       }
-    } catch {
-      // ignore
-    } finally {
-      hasLoadedStateRef.current = true
+    }, 1000);
+  };
+
+  const updatePlayer = (index, field, value) => {
+    setPlayers((current) => {
+      const copy = [...current];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const lockGuess = (index) => {
+    const player = players[index];
+
+    if (!player.name.trim() || String(player.guess).trim() === "") {
+      alert("Fyll i namn och gissning först.");
+      return;
     }
-  }, [])
+
+    setPlayers((current) => {
+      const copy = [...current];
+      copy[index] = { ...copy[index], locked: true };
+      return copy;
+    });
+  };
+
+  const unlockGuess = (index) => {
+    setPlayers((current) => {
+      const copy = [...current];
+      copy[index] = { ...copy[index], locked: false };
+      return copy;
+    });
+  };
+
+  const addPlayer = () => {
+    const newId = nextPlayerIdRef.current++;
+    setPlayers((current) => [
+      ...current,
+      { id: newId, name: "", guess: "", locked: false },
+    ]);
+  };
+
+  const removeLastPlayer = () => {
+    if (players.length <= 2) return;
+    setPlayers((current) => current.slice(0, -1));
+  };
+
+  const startRound = () => {
+    const ready = players.every(
+      (player) =>
+        player.name.trim() &&
+        String(player.guess).trim() !== "" &&
+        player.locked
+    );
+
+    if (!ready) {
+      alert("Alla spelare måste fylla i och trycka Klar.");
+      return;
+    }
+
+    finishingRef.current = false;
+    stopGps();
+    setCount(0);
+    setDistance(0);
+    setTimeLeft(totalSeconds);
+    setIsPaused(false);
+    setGpsStatus("Avstånd ej startad");
+    setGpsCountdown(null);
+
+    startCountdownThenGame();
+  };
+
+  const newGame = () => {
+    disableWakeLock();
+    stopGps();
+    setCount(0);
+    setDistance(0);
+    setTimeLeft(totalSeconds);
+    setIsPaused(false);
+    setGpsStatus("Avstånd ej startad");
+    setGpsCountdown(null);
+    setCountdown(null);
+
+    setPlayers((current) =>
+      current.map((p) => ({
+        id: p.id,
+        name: "",
+        guess: "",
+        locked: false,
+      }))
+    );
+
+    setScreen("start");
+  };
+
+  const togglePause = () => {
+    const nextPaused = !isPaused;
+    setIsPaused(nextPaused);
+
+    if (playMode === "gps") {
+      if (nextPaused) stopGps();
+      else startGpsCountdown();
+    }
+  };
 
   useEffect(() => {
-    if (screen !== 'game') return
+    if (screen !== "game") return;
+    if (playMode !== "time") return;
+    if (isPaused) return;
 
-    if (isPaused) {
-      stopAllTracking()
-      return
+    if (timeLeft <= 0) {
+      finishRound();
+      return;
     }
 
-    acquireWakeLock()
+    const timer = window.setTimeout(() => {
+      setTimeLeft((current) => current - 1);
+    }, 1000);
 
-    if (playMode === 'time') {
-      if (timeLeft > 0) startCountdown()
-    } else {
-      startGpsTracking()
-    }
-
-    return () => {
-      stopAllTracking()
-    }
-  }, [screen, playMode, isPaused, timeLeft])
+    return () => window.clearTimeout(timer);
+  }, [screen, playMode, isPaused, timeLeft]);
 
   useEffect(() => {
-    const handleVisibility = async () => {
-      if (document.visibilityState === 'visible' && screen === 'game' && !isPaused) {
-        await acquireWakeLock()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [screen, isPaused])
-
-  useEffect(() => {
-    if (!hasLoadedStateRef.current) return
-    if (showResumePrompt) return
-
-    const state = {
-      screen,
-      objectType,
-      customObject,
-      playMode,
-      timeMode,
-      targetMinutes,
-      customMinutes,
-      distanceMode,
-      targetDistance,
-      customDistance,
-      players,
-      count,
-      distance,
-      timeLeft,
-      gpsStatus,
-      isPaused,
-    }
-
-    localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(state))
-  }, [
-    screen,
-    objectType,
-    customObject,
-    playMode,
-    timeMode,
-    targetMinutes,
-    customMinutes,
-    distanceMode,
-    targetDistance,
-    customDistance,
-    players,
-    count,
-    distance,
-    timeLeft,
-    gpsStatus,
-    isPaused,
-    showResumePrompt,
-  ])
-
+    return () => stopGps();
+  }, []);
+if (!hasAccess) {
   return (
     <div className="app-shell">
-      <div className="arcade-lights" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
+      <main className="screen-card panel">
+        <h1>🔒 Bilsemester</h1>
+        <p>Skriv koden för att starta appen.</p>
 
-      <div className="background-roadtrip" aria-hidden="true">
-        <span>⭐</span>
-        <span>✨</span>
-        <span>🛣️</span>
-        <span>🚗</span>
-        <span>🌟</span>
-        <span>🚚</span>
-      </div>
+        <input
+          type="text"
+          value={accessCode}
+          onChange={(event) => setAccessCode(event.target.value.toUpperCase())}
+          placeholder="Kod"
+        />
 
-      {showConfetti && (
-        <div className="confetti-burst" aria-hidden="true">
-          <span>🎉</span>
-          <span>✨</span>
-          <span>🎊</span>
-          <span>⭐</span>
-          <span>🥳</span>
-          <span>🎉</span>
-          <span>🏆</span>
-          <span>✨</span>
-          <span>🎊</span>
-          <span>🎉</span>
-          <span>⭐</span>
-          <span>🥳</span>
+        <button
+          className="primary-button"
+          onClick={() => {
+            if (accessCode.trim().toUpperCase() === "WERNA") {
+              localStorage.setItem("bilsemester-access", "yes");
+              setHasAccess(true);
+            } else {
+              alert("Fel kod.");
+            }
+          }}
+        >
+          Lås upp
+        </button>
+      </main>
+    </div>
+  );
+}
+if (isLocked) {
+  return (
+    <div className="app-shell">
+      <main className="screen-card panel">
+        <h1>🔒 Bilsemester Premium</h1>
+
+        <p>Ni har spelat era 5 gratisrundor 🎉</p>
+
+        <div className="mega-winner">
+          29 kr / år
+        </div>
+
+        <p>
+          🚗 Obegränsat spel
+          <br />
+          🏆 Alla framtida uppdateringar
+          <br />
+          🍦 Billigare än en glass
+        </p>
+
+        <button
+          className="primary-button"
+          onClick={() => {
+            const code = prompt("Skriv premiumkod");
+
+            if (code === "Stenhuggaren") {
+              localStorage.setItem("bilsemester-premium", "yes");
+              localStorage.setItem("bilsemester-games", "0");
+              window.location.reload();
+            }
+          }}
+        >
+          🔓 Lås upp Premium
+        </button>
+      </main>
+    </div>
+  );
+}
+  return (
+    <div className="app-shell">
+      {countdown !== null && (
+        <div className="countdown-overlay">
+          <div className="countdown-number">{countdown}</div>
         </div>
       )}
+{showRules && (
+  <div className="rules-overlay">
+    <div className="rules-card">
+      <h2>🚗 Så spelar ni</h2>
 
-      {showResumePrompt && (
-        <div className="card arcade-card pop-in">
-          <div className="fun-badge arcade-badge bounce">🧠 Sparat spel hittat</div>
-          <h1>Fortsätta rundan?</h1>
-          <p className="subtitle">Ett pågående spel finns sparat på den här mobilen.</p>
+     <div className="rules-list">
+  <p>🎯 Alla gissar hur många fordon ni kommer se.</p>
 
-          <div className="guess-box arcade-panel">
-            <p><strong>Antal:</strong> {savedGame?.count ?? 0}</p>
-            <p><strong>Sträcka:</strong> {savedGame?.distance ?? 0} km</p>
-            <p><strong>Tid kvar:</strong> {formatTime(savedGame?.timeLeft ?? 0)}</p>
-          </div>
+  <p>🚙 Räkna bara fordon ni möter på vägen.</p>
 
-          <div className="button-row">
-            <button onClick={startFreshGame}>Börja om</button>
-            <button className="primary-button pulse" onClick={continueSavedGame}>
-              Fortsätt spel
+  <p>🚘 Fordon ni kör om räknas inte — då blir spelet enklare.</p>
+
+  <p>🦌 Djur, vindkraftverk och annat: titta på båda sidor av vägen.</p>
+
+  <p>🏆 Den som gissar närmast vinner!</p>
+</div>
+
+      <label className="rules-checkbox">
+        <input
+          type="checkbox"
+          checked={dontShowRulesAgain}
+          onChange={(event) =>
+            setDontShowRulesAgain(event.target.checked)
+          }
+        />
+        Visa inte igen
+      </label>
+
+      <button
+        className="primary-button"
+        onClick={() => {
+          if (dontShowRulesAgain) {
+            localStorage.setItem("bilsemester-hide-rules", "yes");
+          }
+
+          setShowRules(false);
+        }}
+      >
+        🚀 Nu kör vi!
+      </button>
+    </div>
+  </div>
+)}
+      {screen === "start" && (
+        <main className="pro-home">
+          <section className="pro-hero-card">
+            <img
+              className="pro-hero-img"
+              src={`${import.meta.env.BASE_URL}hero.png`}
+              alt="Familj på bilresa"
+            />
+          </section>
+
+          <section className="pro-home-panel">
+            <div className="pro-feature-grid">
+              <div className="pro-feature-card">
+                <span>🎯</span>
+                <strong>Gissa först!</strong>
+                <small>Vad tror du?</small>
+              </div>
+
+              <div className="pro-feature-card">
+                <span>🚗</span>
+                <strong>Räkna sen!</strong>
+                <small>Tryck när ni ser</small>
+              </div>
+
+              <div className="pro-feature-card">
+                <span>😄</span>
+                <strong>Ha kul!</strong>
+                <small>Gör resan roligare</small>
+              </div>
+            </div>
+
+            <button
+              className="pro-start-button"
+              onClick={() => setScreen("setup")}
+            >
+              <span className="play-icon">▶</span>
+              <span>
+                STARTA SPEL
+                <small>🏆 Närmast vinner</small>
+              </span>
+            </button>
+          </section>
+        </main>
+      )}
+
+      {screen === "setup" && (
+        <main className="screen-card panel">
+          <h1>Bygg rundan</h1>
+
+          <label htmlFor="category">Vad ska ni räkna?</label>
+          <select
+            id="category"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+          >
+            {Object.entries(categories).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value.icon} {value.label}
+              </option>
+            ))}
+            <option value="custom">✏️ Eget val</option>
+          </select>
+
+          {category === "custom" && (
+            <input
+              type="text"
+              value={customCategory}
+              onChange={(event) => setCustomCategory(event.target.value)}
+              placeholder="Skriv vad ni vill räkna"
+            />
+          )}
+
+          <p className="chosen">
+            Ni räknar:{" "}
+            <strong>
+              {objectIcon} {objectName}
+            </strong>
+          </p>
+
+          <label>Hur vill ni spela?</label>
+          <div className="mode-row">
+            <button
+              type="button"
+              className={playMode === "time" ? "active" : ""}
+              onClick={() => setPlayMode("time")}
+            >
+              ⏱️ Tid
+            </button>
+
+            <button
+              type="button"
+              className={playMode === "gps" ? "active" : ""}
+              onClick={() => setPlayMode("gps")}
+            >
+              📍 Avstånd
             </button>
           </div>
-        </div>
-      )}
 
-      {!showResumePrompt && screen === 'start' && (
-        <div className="card arcade-card start-card pop-in">
-          <div className="fun-badge arcade-badge bounce">🎮 Road-trip arcade</div>
-          <h1 className="app-title">{getRoadIcon()} Bilsemester</h1>
-          <p className="subtitle">Gissa, räkna och vinn över familjen på bilresan!</p>
+          {playMode === "time" && (
+            <>
+              <label htmlFor="timeChoice">Hur länge?</label>
+              <select
+                id="timeChoice"
+                value={timeChoice}
+                onChange={(event) => setTimeChoice(Number(event.target.value))}
+              >
+                {timeOptions.map((option) => (
+                  <option key={option.seconds} value={option.seconds}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
 
-          <div className="hero-icons">
-            <span>🚚</span>
-            <span>🚙</span>
-            <span>🚌</span>
-            <span>🐄</span>
-            <span>⭐</span>
-          </div>
+              {timeChoice === -1 && (
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  value={customMinutes}
+                  onChange={(event) => setCustomMinutes(event.target.value)}
+                  placeholder="Egen tid i minuter"
+                />
+              )}
 
-          <div className="button-row">
-            <button className="primary-button pulse" onClick={() => setScreen('setup')}>
-              Starta spel
-            </button>
-            {latestSettingsExists && (
-              <button onClick={applyLatestSettings}>Snabbstart</button>
-            )}
-          </div>
-        </div>
-      )}
+              <p className="chosen">
+                Speltid: <strong>{formatTime(totalSeconds)}</strong>
+              </p>
+            </>
+          )}
 
-      {!showResumePrompt && screen === 'setup' && (
-        <div className="card arcade-card pop-in">
-          <div className="fun-badge arcade-badge bounce">🛠️ Bygg rundan</div>
-          <h1>Bilsemester</h1>
+          {playMode === "gps" && (
+            <>
+              <label htmlFor="distanceChoice">Hur långt?</label>
+              <select
+                id="distanceChoice"
+                value={distanceChoice}
+                onChange={(event) =>
+                  setDistanceChoice(Number(event.target.value))
+                }
+              >
+                {distanceOptions.map((option) => (
+                  <option key={option.km} value={option.km}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
 
-          <div className="section arcade-panel">
-            <label className="label">Vad ska ni räkna?</label>
-            <select value={objectType} onChange={(e) => setObjectType(e.target.value)}>
-              <option value="lastbilar">Lastbilar</option>
-              <option value="bilar">Bilar</option>
-              <option value="röda bilar">Röda bilar</option>
-              <option value="husbilar">Husbilar</option>
-              <option value="skyltar">Skyltar</option>
-              <option value="eget">Eget objekt</option>
-            </select>
+              {distanceChoice === -1 && (
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  inputMode="decimal"
+                  value={customKm}
+                  onChange={(event) => setCustomKm(event.target.value)}
+                  placeholder="Eget avstånd i km"
+                />
+              )}
 
-            {objectType === 'eget' && (
+              <p className="chosen">
+                Avstånd: <strong>{targetKm} km</strong>
+              </p>
+            </>
+          )}
+
+          <h2>Spelare</h2>
+
+          {players.map((player, index) => (
+            <section className="player-box" key={player.id}>
               <input
                 type="text"
-                placeholder="Skriv eget objekt"
-                value={customObject}
-                onChange={(e) => setCustomObject(e.target.value)}
+                value={player.name}
+                onChange={(event) =>
+                  updatePlayer(index, "name", event.target.value)
+                }
+                placeholder={`Namn spelare ${index + 1}`}
+                disabled={player.locked}
               />
-            )}
-          </div>
 
-          <div className="section arcade-panel">
-            <label className="label">Hur vill ni spela?</label>
-            <div className="distance-mode-row">
-              <button
-                type="button"
-                className={playMode === 'time' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                onClick={() => setPlayMode('time')}
-              >
-                Tid
-              </button>
-              <button
-                type="button"
-                className={playMode === 'gps' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                onClick={() => setPlayMode('gps')}
-              >
-                GPS
-              </button>
-            </div>
-          </div>
+              {!player.locked ? (
+                <>
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={player.guess}
+                    onChange={(event) =>
+                      updatePlayer(index, "guess", event.target.value)
+                    }
+                    placeholder={`Gissning på ${objectName}`}
+                  />
 
-          {playMode === 'time' && (
-            <div className="section arcade-panel">
-              <label className="label">Hur länge?</label>
-
-              <div className="distance-mode-row">
-                <button
-                  type="button"
-                  className={timeMode === 'preset' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                  onClick={() => setTimeMode('preset')}
-                >
-                  Fasta val
-                </button>
-                <button
-                  type="button"
-                  className={timeMode === 'custom' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                  onClick={() => setTimeMode('custom')}
-                >
-                  Egen tid
-                </button>
-              </div>
-
-              {timeMode === 'preset' ? (
-                <select
-                  value={targetMinutes}
-                  onChange={(e) => setTargetMinutes(Number(e.target.value))}
-                >
-                  <option value={1}>1 minut</option>
-                  <option value={3}>3 minuter</option>
-                  <option value={5}>5 minuter</option>
-                  <option value={10}>10 minuter</option>
-                </select>
+                  <button
+                    className="secondary-button"
+                    onClick={() => lockGuess(index)}
+                  >
+                    Klar
+                  </button>
+                </>
               ) : (
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="Skriv tid i minuter"
-                  value={customMinutes}
-                  onChange={(e) => setCustomMinutes(e.target.value)}
-                />
-              )}
-            </div>
-          )}
+                <div className="locked-box">
+                  <strong>✔️ Gissning sparad</strong>
+                  <span>••••</span>
 
-          {playMode === 'gps' && (
-            <div className="section arcade-panel">
-              <label className="label">Hur långt?</label>
-
-              <div className="distance-mode-row">
-                <button
-                  type="button"
-                  className={distanceMode === 'preset' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                  onClick={() => setDistanceMode('preset')}
-                >
-                  Fasta val
-                </button>
-                <button
-                  type="button"
-                  className={distanceMode === 'custom' ? 'primary-button small-mode-button' : 'small-mode-button'}
-                  onClick={() => setDistanceMode('custom')}
-                >
-                  Eget avstånd
-                </button>
-              </div>
-
-              {distanceMode === 'preset' ? (
-                <select
-                  value={targetDistance}
-                  onChange={(e) => setTargetDistance(Number(e.target.value))}
-                >
-                  <option value={1}>1 km</option>
-                  <option value={2}>2 km</option>
-                  <option value={5}>5 km</option>
-                  <option value={10}>10 km</option>
-                </select>
-              ) : (
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="Skriv avstånd i km"
-                  value={customDistance}
-                  onChange={(e) => setCustomDistance(e.target.value)}
-                />
-              )}
-            </div>
-          )}
-
-          <div className="players">
-            {players.map((player, index) => (
-              <div key={index} className="player-card arcade-panel">
-                <div className="player-title">👤 Namn</div>
-
-                <input
-                  type="text"
-                  value={player.name}
-                  onChange={(e) => updatePlayer(index, 'name', e.target.value)}
-                  placeholder="Skriv ditt namn"
-                  disabled={player.locked}
-                />
-
-                {!player.locked ? (
-                  <div className="guess-row">
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputMode="numeric"
-                      value={player.guess}
-                      onChange={(e) => {
-                        const value = e.target.value
-
-                        if (value === '') {
-                          updatePlayer(index, 'guess', '')
-                          return
-                        }
-
-                        if (/^\d+$/.test(value)) {
-                          updatePlayer(index, 'guess', value)
-                        }
-                      }}
-                      placeholder={`Gissning på antal ${selectedObject}`}
-                    />
-                    <button onClick={() => lockGuess(index)}>Klar</button>
-                  </div>
-                ) : (
-                  <div className="locked-box">
-                    <span>✔ Gissning sparad</span>
-                    <span className="masked">***</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="button-row">
-            <button onClick={addPlayer}>+ Lägg till spelare</button>
-            <button onClick={unlockAllGuesses}>Lås upp alla</button>
-          </div>
-
-          <div className="button-row">
-            <button onClick={() => setScreen('start')}>Tillbaka</button>
-            <button className="primary-button pulse" onClick={startGame}>
-              Starta rundan
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!showResumePrompt && screen === 'game' && (
-        <div className="card arcade-card pop-in game-card-minimal">
-          <div className="game-top">
-            <div className="fun-badge arcade-badge bounce">
-              {playMode === 'time' ? '⏱️ Timer-läge aktivt' : '📍 GPS-läge aktivt'}
-            </div>
-
-            <div className="top-status-text">
-              {playMode === 'time' ? `Tid kvar: ${formatTime(timeLeft)}` : gpsStatus}
-            </div>
-          </div>
-
-          <div className="game-center">
-            <div className={`count count-big-center ${scorePulse ? 'score-pulse' : ''}`}>
-              {count}
-            </div>
-            <div className="object-hint">
-              {getRoadIcon()} {selectedObject}
-            </div>
-          </div>
-
-          <div className="game-bottom">
-            <div className="progress-container progress-lower road-meter">
-              <div className="progress-bar" style={{ width: `${progress}%` }} />
-            </div>
-
-            {playMode === 'gps' && (
-              <div className="top-status-text small-status">
-                {distance.toFixed(2)} / {activeTargetDistance} km
-              </div>
-            )}
-
-            <div className="tap-zone-wrap">
-              <button className="tap-zone-button arcade-main-button" onClick={handleCountUp}>
-                +1 {selectedObject.toUpperCase()}
-              </button>
-            </div>
-
-            <div className="button-row compact-actions">
-              <button className="secondary-btn undo-btn" onClick={handleUndo}>
-                Ångra -1
-              </button>
-              <button className="secondary-btn" onClick={togglePause}>
-                {isPaused ? 'Fortsätt' : 'Pausa'}
-              </button>
-            </div>
-
-            <div className="button-row">
-              <button onClick={startFreshGame}>Avbryt och börja om</button>
-              <button className="danger-button" onClick={finishGame}>
-                Avsluta nu
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!showResumePrompt && screen === 'result' && (
-        <div className="card arcade-card pop-in result-card">
-          <div className="fun-badge arcade-badge bounce">🏁 Rundan är klar!</div>
-          <h1>🏆 Resultat</h1>
-
-          <div className="winner-hero">
-            {winners.length > 1
-              ? `🤝 Oavgjort: ${winners.map((w) => w.name).join(', ')}`
-              : `👑 Vinnare: ${winners[0]?.name || ''}`}
-          </div>
-
-          <p className="result-main">
-            Faktiskt antal {selectedObject}: {count}
-          </p>
-
-          <p className="result-subtext">
-            {playMode === 'time'
-              ? `Spelad tid: ${activeTargetMinutes} min`
-              : `GPS-runda: ${activeTargetDistance} km`}
-          </p>
-
-          <div className="podium-list">
-            {sortedResults.map((player, index) => (
-              <div
-                key={index}
-                className={`podium-item ${index === 0 ? 'winner-item' : ''}`}
-              >
-                <div className="podium-medal">{getMedal(index)}</div>
-                <div className="podium-info">
-                  <div className="podium-name">{player.name}</div>
-                  <div className="podium-score">
-                    Gissade {player.guess} • Skillnad {player.diff}
-                  </div>
+                  <button
+                    className="secondary-button"
+                    onClick={() => unlockGuess(index)}
+                  >
+                    Ändra
+                  </button>
                 </div>
-              </div>
-            ))}
+              )}
+            </section>
+          ))}
+
+          <button className="secondary-button" onClick={addPlayer}>
+            + Lägg till spelare
+          </button>
+
+          {players.length > 2 && (
+            <button className="secondary-button" onClick={removeLastPlayer}>
+              − Ta bort sista spelare
+            </button>
+          )}
+
+          <button className="primary-button" onClick={startRound}>
+            🚀 Starta rundan
+          </button>
+
+          <button className="ghost-button" onClick={() => setScreen("start")}>
+            Tillbaka
+          </button>
+        </main>
+      )}
+
+      {screen === "game" && (
+        <main className="screen-card panel game-screen">
+          <h1>{objectIcon} Räkna!</h1>
+
+          <p>Tryck varje gång ni ser {objectName}.</p>
+
+          {playMode === "time" ? (
+            <div className="timer-box">⏱️ {formatTime(timeLeft)}</div>
+          ) : (
+            <div className="timer-box">
+              {gpsCountdown
+                ? `🚦 Startar om ${gpsCountdown}...`
+                : `📍 ${distance.toFixed(2)} / ${targetKm} km`}
+            </div>
+          )}
+
+          {playMode === "gps" && <p className="gps-status">{gpsStatus}</p>}
+
+          <div className="progress-track">
+            <div
+              className="progress-fill"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
 
-          <div className="button-row">
-            <button onClick={resetRound}>Ny runda</button>
-            <button className="primary-button" onClick={applyLatestSettings}>
-              Snabbstart igen
+          <div className={`count-number ${count > 0 ? "count-bounce" : ""}`}>
+  {count}
+</div>
+<div className="floating-points-container">
+  {floatingPoints.map((item) => (
+    <div key={item.id} className="floating-point">
+      +1 {objectIcon}
+    </div>
+  ))}
+</div>
+          <button
+            className="count-button"
+            disabled={playMode === "gps" && !gpsStarted}
+            onClick={(event) => {
+  event.currentTarget.classList.remove("pop");
+
+  void event.currentTarget.offsetWidth;
+
+  event.currentTarget.classList.add("pop");
+
+  playClickEffect();
+  setCount((value) => value + 1);
+  const id = Date.now();
+
+setFloatingPoints((current) => [
+  ...current,
+  { id }
+]);
+
+setTimeout(() => {
+  setFloatingPoints((current) =>
+    current.filter((item) => item.id !== id)
+  );
+}, 900);
+}}
+          >
+            +1
+          </button>
+
+          <button
+            className="secondary-button"
+            onClick={() => setCount((value) => Math.max(0, value - 1))}
+          >
+            Ångra -1
+          </button>
+
+          <button className="secondary-button" onClick={togglePause}>
+            {isPaused ? "▶ Fortsätt" : "⏸ Pausa"}
+          </button>
+
+          <button className="secondary-button result-button" onClick={finishRound}>
+            🏁 Visa resultat
+          </button>
+          <div className="road-status">
+  🚗 Familjen är ute på äventyr!
+</div>
+        </main>
+      )}
+
+      {screen === "result" && (
+        <>
+          <Confetti numberOfPieces={700} recycle={false} gravity={0.25} />
+
+          <main className="screen-card panel">
+            <h1>🏆 Resultat</h1>
+
+            <p>
+              Ni såg <strong>{count}</strong> {objectName}
+            </p>
+
+            <div className="winner-box mega-winner">
+              <div className="winner-title">
+  <span>👑</span>
+
+  {results.filter((player) => player.diff === results[0]?.diff).length > 1
+    ? "DELAD VINST"
+    : "VINNARE"}
+
+  <span>👑</span>
+</div>
+              <br />
+              {results.filter((player) => player.diff === results[0]?.diff).map((player) => player.name).join(" & ")}
+            </div>
+
+            {results.map((player, index) => (
+              <div className="result-row" key={index}>
+                <strong>
+                  {index + 1}. {player.name}
+                </strong>
+
+                <span>
+                  Gissade {player.guess} · Skillnad {player.diff}
+                </span>
+              </div>
+            ))}
+
+            <button className="primary-button" onClick={newGame}>
+              Nytt spel
             </button>
-          </div>
-        </div>
+          </main>
+        </>
       )}
     </div>
-  )
+  );
 }
-
-export default App
