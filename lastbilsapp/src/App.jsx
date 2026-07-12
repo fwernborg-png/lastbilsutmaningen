@@ -5,7 +5,7 @@ import "./App.css";
 const categories = {
   roda_bilar: { label: "röda bilar", icon: "🚗" },
   lastbilar: { label: "lastbilar", icon: "🚚" },
-  djur: { label: "djur", icon: "🐄" },
+  djur: { label: "djur", icon: "�" },
   gula_bilar: { label: "gula bilar", icon: "🚕" },
   taxibilar: { label: "taxibilar", icon: "🚖" },
   motorcyklar: { label: "motorcyklar", icon: "🏍️" },
@@ -65,13 +65,14 @@ const isLocked =
   const [distanceChoice, setDistanceChoice] = useState(2);
   const [customKm, setCustomKm] = useState(3);
   const [distance, setDistance] = useState(0);
-  const [gpsStatus, setGpsStatus] = useState("GPS ej startad");
+  const [gpsStatus, setGpsStatus] = useState("Avstånd ej startad");
   const [gpsCountdown, setGpsCountdown] = useState(null);
   const [gpsStarted, setGpsStarted] = useState(false);
 
+  const nextPlayerIdRef = useRef(3);
   const [players, setPlayers] = useState([
-    { name: "", guess: "", locked: false },
-    { name: "", guess: "", locked: false },
+    { id: 1, name: "", guess: "", locked: false },
+    { id: 2, name: "", guess: "", locked: false },
   ]);
 useEffect(() => {
   const savedGame = localStorage.getItem("bilsemester-save");
@@ -190,8 +191,8 @@ const playWinEffect = () => {
     audio.volume = 0.9;
     audio.play();
 
-  } catch (err) {
-    console.log("Kunde inte spela vinstljud");
+  } catch {
+    // Vinstljud stöds inte i alla webbläsare
   }
 };
 
@@ -269,13 +270,13 @@ localStorage.setItem(
 
   const startGps = () => {
     if (!navigator.geolocation) {
-      setGpsStatus("GPS stöds inte på denna enhet");
+      setGpsStatus("Avståndsmätning stöds inte på denna enhet");
       return;
     }
 
     stopGps();
     lastPositionRef.current = null;
-    setGpsStatus("Startar GPS...");
+    setGpsStatus("Startar avståndsmätning...");
     setGpsStarted(true);
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -283,13 +284,13 @@ localStorage.setItem(
         const { latitude, longitude, accuracy } = position.coords;
 
         if (accuracy > 100) {
-          setGpsStatus("Väntar på bättre GPS-signal...");
+          setGpsStatus("Väntar på bättre signal...");
           return;
         }
 
         if (!lastPositionRef.current) {
           lastPositionRef.current = { latitude, longitude };
-          setGpsStatus("GPS aktiv – kör!");
+          setGpsStatus("Räknar avstånd – kör!");
           return;
         }
 
@@ -313,13 +314,13 @@ localStorage.setItem(
         });
 
         lastPositionRef.current = { latitude, longitude };
-        setGpsStatus("GPS aktiv – kör!");
+        setGpsStatus("Räknar avstånd – kör!");
       },
       (error) => {
         if (error.code === 1) setGpsStatus("Platsåtkomst nekad");
         else if (error.code === 2) setGpsStatus("Position saknas");
-        else if (error.code === 3) setGpsStatus("GPS tog för lång tid");
-        else setGpsStatus("GPS-fel");
+        else if (error.code === 3) setGpsStatus("Tog för lång tid");
+        else setGpsStatus("Mätfel – försök igen");
       },
       {
         enableHighAccuracy: true,
@@ -410,9 +411,10 @@ localStorage.setItem(
   };
 
   const addPlayer = () => {
+    const newId = nextPlayerIdRef.current++;
     setPlayers((current) => [
       ...current,
-      { name: "", guess: "", locked: false },
+      { id: newId, name: "", guess: "", locked: false },
     ]);
   };
 
@@ -440,7 +442,7 @@ localStorage.setItem(
     setDistance(0);
     setTimeLeft(totalSeconds);
     setIsPaused(false);
-    setGpsStatus("GPS ej startad");
+    setGpsStatus("Avstånd ej startad");
     setGpsCountdown(null);
 
     startCountdownThenGame();
@@ -453,12 +455,13 @@ localStorage.setItem(
     setDistance(0);
     setTimeLeft(totalSeconds);
     setIsPaused(false);
-    setGpsStatus("GPS ej startad");
+    setGpsStatus("Avstånd ej startad");
     setGpsCountdown(null);
     setCountdown(null);
 
     setPlayers((current) =>
-      current.map(() => ({
+      current.map((p) => ({
+        id: p.id,
         name: "",
         guess: "",
         locked: false,
@@ -778,7 +781,7 @@ if (isLocked) {
               )}
 
               <p className="chosen">
-                GPS-runda: <strong>{targetKm} km</strong>
+                Avstånd: <strong>{targetKm} km</strong>
               </p>
             </>
           )}
@@ -786,7 +789,7 @@ if (isLocked) {
           <h2>Spelare</h2>
 
           {players.map((player, index) => (
-            <section className="player-box" key={index}>
+            <section className="player-box" key={player.id}>
               <input
                 type="text"
                 value={player.name}
@@ -884,7 +887,7 @@ if (isLocked) {
 <div className="floating-points-container">
   {floatingPoints.map((item) => (
     <div key={item.id} className="floating-point">
-      +1 🚗
+      +1 {objectIcon}
     </div>
   ))}
 </div>

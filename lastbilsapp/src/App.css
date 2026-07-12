@@ -45,15 +45,6 @@ select {
   backdrop-filter: blur(8px);
 }
 
-.hero-img {
-  width: 100%;
-  max-width: 320px;
-  display: block;
-  margin: 0 auto 18px;
-  border-radius: 26px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-}
-
 h1 {
   margin: 0 0 12px;
   font-size: 30px;
@@ -213,6 +204,7 @@ button:active {
   min-height: 120px;
   font-weight: 900;
   font-size: 1.4rem;
+  color: white;
   box-shadow: 0 0 25px rgba(255, 215, 0, 0.45);
 }
 .winner-title {
@@ -223,9 +215,9 @@ button:active {
 
   font-size: 42px;
   font-weight: 900;
-  color: #ffe84a;
+  color: white;
 
-  text-shadow: 0 3px 10px rgba(0,0,0,0.35);
+  text-shadow: 0 3px 10px rgba(0,0,0,0.45);
 }
 .result-row {
   display: grid;
@@ -273,7 +265,7 @@ button:active {
 .pro-feature-card small {
   display: block;
   font-size: 19px;
-  color: #5a6b8a;
+  color: #3d5070;
 }
 
 /* Mobil */
@@ -287,19 +279,6 @@ button:active {
     padding: 18px;
   }
 
-  .hero {
-    padding-top: 40px;
-  }
-
-  h1 {
-    font-size: 42px !important;
-    line-height: 1.1;
-  }
-
-  .hero-img {
-    max-width: 300px;
-  }
-
   .count-number {
     font-size: 92px;
   }
@@ -309,9 +288,15 @@ button:active {
     font-size: 48px;
   }
 }
-/* FIX mobil top spacing */
+/* Startsidans huvudlayout */
 .pro-home {
+  width: min(100%, 430px);
+  max-width: 430px;
+  margin: 0 auto;
   padding-top: env(safe-area-inset-top);
+  background: #111a4d;
+  border-radius: 24px;
+  overflow: hidden;
 }
 
 .pro-hero-card {
@@ -321,24 +306,6 @@ button:active {
   .pro-hero-img {
     margin-top: 10px;
   }
-}
-/* Centrera appen på stora skärmar */
-.pro-home {
-  max-width: 420px;
-  margin: 0 auto;
-}
-.pro-home {
-  max-width: 420px;
-  margin: 0 auto;
-  background: #111a4d;
-  border-radius: 24px;
-  overflow: hidden;
-}
-/* Desktop + mobil: rätt bredd på startsidan */
-.pro-home {
-  width: min(100%, 430px);
-  max-width: 430px;
-  margin: 0 auto;
 }
 
 .pro-hero-card,
@@ -677,121 +644,6 @@ button:active {
     padding: 10px 14px;
   }
 }
-/* ===== KONFETTI ===== */
-
-.confetti {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 9999;
-}
-
-.confetti span {
-  position: absolute;
-  top: -30px;
-  left: calc(var(--i) * 1.5%);
-  width: 10px;
-  height: 16px;
-  border-radius: 3px;
-  background: hsl(calc(var(--i) * 38), 90%, 60%);
-  animation: confettiFall 2.6s ease-in forwards;
-  animation-delay: calc(var(--i) * 0.025s);
-}
-
-.confetti span:nth-child(3n) {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.confetti span:nth-child(4n) {
-  width: 15px;
-  height: 10px;
-}
-
-@keyframes confettiFall {
-  0% {
-    transform: translateY(-40px) rotate(0deg);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateY(110vh) rotate(760deg);
-    opacity: 0;
-  }
-}
-/* ===== STOR VINNARHYLLNING ===== */
-
-.winner-celebration {
-  background: linear-gradient(180deg, #fff7c2, #ffcf33);
-  color: #241500;
-  border-radius: 26px;
-  padding: 24px 16px;
-  margin: 18px 0;
-  text-align: center;
-  box-shadow: 0 10px 0 #b87900, 0 18px 30px rgba(0,0,0,0.35);
-  animation: winnerPop 0.7s ease-out;
-}
-
-.winner-crown {
-  font-size: 54px;
-  animation: crownBounce 1s ease-in-out infinite;
-}
-
-.winner-label {
-  font-size: 24px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  margin-top: 6px;
-}
-
-.winner-name {
-  font-size: 42px;
-  font-weight: 900;
-  margin-top: 8px;
-  color: #111a4d;
-  text-shadow: 2px 2px 0 #ffffff;
-  display: flex;
-justify-content: center;
-align-items: center;
-gap: 10px;
-  letter-spacing: 1px;
-}
-
-.winner-stars {
-  font-size: 44px;
-  margin-top: 10px;
-  animation: winnerPulse 2s infinite;
-}
-
-/* Mer intensiv konfetti */
-.confetti span {
-  animation-duration: 3.2s;
-}
-
-@keyframes winnerPop {
-  0% {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  70% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes crownBounce {
-  0%, 100% {
-    transform: translateY(0) rotate(-4deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(4deg);
-  }
-}
 .mega-winner {
   font-size: 42px;
   text-align: center;
@@ -799,6 +651,12 @@ gap: 10px;
   color: #ffe347;
 
   animation: pulseWinner 1s infinite alternate;
+}
+
+/* Vinnarnamnets text ska vara vit mot den starka gradienten */
+.winner-box.mega-winner {
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes pulseWinner {
@@ -1104,6 +962,7 @@ gap: 10px;
 .count-button:active {
   transform: scale(0.96);
   filter: brightness(1.08);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
 }
 @keyframes winnerPulse {
   0% {
